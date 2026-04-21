@@ -5,7 +5,7 @@ A real-time meeting moderation assistant powered by Flask, SocketIO, and Vexa's 
 ## Stack
 
 - **Backend:** Python Flask + Flask-SocketIO
-- **Transcription:** [Vexa API](https://vexa.ai) — bot joins the meeting and streams transcript via WebSocket
+- **Transcription:** [Vexa API](https://vexa.ai) bot joins the meeting and streams transcript via WebSocket
 - **AI Moderation:** OpenAI-powered pipeline (`moderator.py`) for notes, action items, and summaries
 - **Frontend:** Vanilla HTML/CSS/JS with real-time SocketIO updates
 
@@ -24,7 +24,7 @@ A real-time meeting moderation assistant powered by Flask, SocketIO, and Vexa's 
    pip install -r requirements.txt
    ```
 
-2. **Configure environment** — create a `.env` file:
+2. **Configure environment**  create a `.env` file:
    ```
    VEXA_API_KEY=your_vexa_api_key_here
    OPENAI_API_KEY=your_openai_api_key_here
@@ -64,5 +64,5 @@ requirements.txt   # Python dependencies
 | `transcript` | server → client | `{ text, speaker }` |
 | `moderation` | server → client | `{ notes, action_items }` |
 | `status_update` | server → client | `{ status }` |
-| `call_detected` | server → client | — |
-| `call_ended` | server → client | — |
+| `call_detected` | server → client | - |
+| `call_ended` | server → client | - |

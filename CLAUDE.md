@@ -14,7 +14,7 @@ I have a working Flask + SocketIO web app for Agile meeting moderation. I need t
 
 \## What needs to change
 
-Replace the local audio capture pipeline with Vexa's WebSocket transcript stream. The frontend should stay the same — only the backend data source changes.
+Replace the local audio capture pipeline with Vexa's WebSocket transcript stream. The frontend should stay the same, only the backend data source changes.
 
 
 
@@ -78,7 +78,7 @@ Store in a .env file as VEXA\_API\_KEY and load with python-dotenv
 
 \- All existing SocketIO events and handlers
 
-\- The AI notes/moderation pipeline (moderator.py) — feed Vexa transcript text into it exactly as before
+\- The AI notes/moderation pipeline (moderator.py) feed Vexa transcript text into it exactly as before
 
 \- The summary endpoint
 
