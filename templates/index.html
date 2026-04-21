@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scribe — Agile Meeting Moderator</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23d4663a'/%3E%3Ccircle cx='16' cy='13' r='4.5' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M9 13a7 7 0 0014 0' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='16' y1='20' x2='16' y2='24' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='12' y1='24' x2='20' y2='24' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    :root {
+      --bg:         #1c1b19;
+      --surface:    #242320;
+      --surface-2:  #2c2b28;
+      --surface-3:  #343330;
+      --border:     #35342f;
+      --border-2:   #403e38;
+      --text:       #ede9e0;
+      --text-2:     #b5afa3;
+      --text-3:     #6e6a62;
+      --accent:     #d4663a;
+      --accent-dim: #2e1e15;
+      --green:      #4e9e6e;
+      --green-dim:  #132617;
+      --amber:      #c88b3a;
+      --amber-dim:  #281e0d;
+      --red:        #c0504a;
+      --red-dim:    #2a1312;
+      --radius:     10px;
+      --radius-sm:  6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Scrollbars ─── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+    /* ─── Header ─── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .logo-icon {
+      width: 30px;
+      height: 30px;
+      background: var(--accent);
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
+    .logo-icon svg { width: 17px; height: 17px; }
+
+    .logo-wordmark {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+      gap: 2px;
+    }
+
+    .logo-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-sub {
+      font-size: 10.5px;
+      font-weight: 400;
+      color: var(--text-3);
+      letter-spacing: 0.02em;
+    }
+
+    #status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px 4px 8px;
+      border-radius: 99px;
+      background: var(--surface-3);
+      color: var(--text-3);
+      border: 1px solid var(--border);
+      transition: all 0.25s ease;
+      letter-spacing: 0.01em;
+    }
+
+    #status-pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-3);
+      transition: background 0.25s ease;
+    }
+
+    #status-pill.connected { background: var(--green-dim); color: var(--green); border-color: #2a5c3e; }
+    #status-pill.connected .dot { background: var(--green); box-shadow: 0 0 0 3px rgba(78,158,110,0.2); }
+    #status-pill.joining  { background: var(--amber-dim); color: var(--amber); border-color: #4a3820; }
+    #status-pill.joining  .dot { background: var(--amber); animation: pulse 1.2s ease infinite; }
+    #status-pill.error    { background: var(--red-dim);   color: var(--red);   border-color: #4a2523; }
+    #status-pill.error    .dot { background: var(--red); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* ─── Header actions ─── */
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      letter-spacing: -0.01em;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--border-2);
+      color: var(--text-2);
+    }
+    .btn-ghost:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-2); }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: transparent;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #c05830; }
+
+    .btn-danger {
+      background: transparent;
+      border-color: var(--border-2);
+      color: var(--text-3);
+    }
+    .btn-danger:hover { background: var(--red-dim); border-color: #4a2523; color: var(--red); }
+
+    .btn svg { width: 14px; height: 14px; }
+
+    /* ─── Join bar ─── */
+    #join-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .input-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrap svg {
+      position: absolute;
+      left: 11px;
+      width: 14px;
+      height: 14px;
+      color: var(--text-3);
+      pointer-events: none;
+    }
+
+    #meeting-url {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border-2);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px 9px 34px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    #meeting-url:focus { border-color: var(--accent); }
+    #meeting-url::placeholder { color: var(--text-3); }
+    #meeting-url:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ─── Toggle button ─── */
+    #btn-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 20px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease;
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    #btn-toggle:hover { background: #c05830; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+    #btn-toggle:active { transform: scale(0.97); }
+
+    #btn-toggle.active {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid #4a2523;
+      box-shadow: none;
+    }
+    #btn-toggle.active:hover { background: #3a1918; }
+
+    #btn-toggle svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    #btn-toggle .btn-icon-stop {
+      width: 10px; height: 10px;
+      background: var(--red);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* ─── Main layout ─── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ─── Panel shared ─── */
+    .panel { display: flex; flex-direction: column; min-height: 0; }
+
+    .panel-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+
+    .panel-header-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+      flex: 1;
+    }
+
+    .panel-count {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-3);
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 1px 7px;
+      min-width: 24px;
+      text-align: center;
+    }
+
+    /* ─── Transcript panel ─── */
+    #transcript-panel { border-right: 1px solid var(--border); }
+
+    #transcript-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .transcript-entry {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      animation: slideIn 0.2s ease;
+      transition: border-color 0.15s;
+    }
+
+    .transcript-entry:hover { border-color: var(--border-2); }
+
+    .transcript-entry.pending { border-color: var(--border); opacity: 0.65; }
+    .transcript-entry.pending .text::after {
+      content: ' ●●●';
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: var(--text-3);
+      animation: blink 1s ease infinite;
+      vertical-align: middle;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .transcript-entry .speaker {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .transcript-entry .speaker::before {
+      content: '';
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.6;
+    }
+
+    .transcript-entry .text {
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--text-2);
+    }
+
+    /* ─── Empty state ─── */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text-3);
+      padding: 40px;
+      text-align: center;
+    }
+
+    .empty-state svg { width: 32px; height: 32px; opacity: 0.4; }
+    .empty-state p { font-size: 13px; line-height: 1.6; max-width: 220px; }
+
+    /* ─── Notes panel ─── */
+    #notes-panel { background: var(--surface); }
+
+    #notes-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .notes-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: slideIn 0.2s ease;
+    }
+
+    .notes-card-header {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--surface-2);
+    }
+
+    .notes-card-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .notes-card-icon svg { width: 9px; height: 9px; }
+
+    .notes-card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-3);
+    }
+
+    .notes-card-body { padding: 10px 12px; }
+
+    .notes-card ul { padding-left: 14px; display: flex; flex-direction: column; gap: 4px; }
+    .notes-card li { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+    .notes-card p  { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+
+    /* card accent colors */
+    .card-action .notes-card-icon { background: rgba(212,102,58,0.15); color: var(--accent); }
+    .card-action .notes-card-icon svg { fill: var(--accent); }
+    .card-blocker .notes-card-icon { background: var(--red-dim); color: var(--red); }
+    .card-blocker .notes-card-icon svg { fill: var(--red); }
+    .card-decision .notes-card-icon { background: var(--green-dim); color: var(--green); }
+    .card-decision .notes-card-icon svg { fill: var(--green); }
+    .card-notes .notes-card-icon { background: var(--amber-dim); color: var(--amber); }
+    .card-notes .notes-card-icon svg { fill: var(--amber); }
+
+    /* ─── Footer ─── */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 0 20px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      color: var(--text-3);
+      padding: 0 16px;
+      border-right: 1px solid var(--border);
+    }
+
+    .stat:first-child { padding-left: 0; }
+    .stat:last-child  { border-right: none; }
+    .stat strong { color: var(--text-2); font-weight: 500; }
+
+    /* ─── Summary drawer ─── */
+    #summary-drawer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border-2);
+      max-height: 45vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+      z-index: 100;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.4);
+    }
+
+    #summary-drawer.open { transform: translateY(0); }
+
+    .drawer-header {
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 1;
+    }
+
+    .drawer-header h2 { font-size: 13px; font-weight: 600; flex: 1; color: var(--text); }
+
+    #btn-close-summary {
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      color: var(--text-3);
+      width: 26px;
+      height: 26px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    #btn-close-summary:hover { color: var(--text); background: var(--surface-2); }
+
+    #summary-content {
+      padding: 18px 20px 24px;
+      font-size: 13.5px;
+      color: var(--text-2);
+      line-height: 1.7;
+    }
+
+    /* ─── Loading shimmer ─── */
+    .loading { color: var(--text-3); font-style: italic; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="1" width="5" height="8" rx="2.5" fill="white"/>
+        <path d="M3 8.5a5.5 5.5 0 0011 0" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="8.5" y1="14" x2="8.5" y2="16" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="6" y1="16" x2="11" y2="16" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="logo-wordmark">
+      <span class="logo-name">Scribe</span>
+      <span class="logo-sub">Agile Meeting Moderator</span>
+    </div>
+  </div>
+
+  <div id="status-pill">
+    <span class="dot"></span>
+    <span id="status-text">idle</span>
+  </div>
+
+  <div class="header-actions">
+    <button class="btn btn-ghost" id="btn-summary">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 4h12v1.5H2V4zm0 3h12v1.5H2V7zm0 3h8v1.5H2V10z"/></svg>
+      Summary
+    </button>
+  </div>
+</header>
+
+<div id="join-bar">
+  <div class="input-wrap">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 2a5 5 0 104 8.09l2.95 2.96 1.06-1.06L12.09 9A5 5 0 007 2zm0 1.5a3.5 3.5 0 110 7 3.5 3.5 0 010-7z"/></svg>
+    <input id="meeting-url" type="text" placeholder="https://meet.google.com/abc-defg-hij" autocomplete="off" />
+  </div>
+  <button id="btn-toggle">
+    <svg id="btn-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a3 3 0 00-3 3v4a3 3 0 006 0V5a3 3 0 00-3-3zm-5 6a5 5 0 0010 0H11.5a3.5 3.5 0 01-7 0H3zm5 5v1.5h-2V16h4v-1.5h-2V13z"/></svg>
+    <span id="btn-label">Start Transcription</span>
+  </button>
+</div>
+
+<main>
+  <section id="transcript-panel" class="panel">
+    <div class="panel-header">
+      <span class="panel-header-label">Live Transcript</span>
+      <span class="panel-count" id="count-segments">0</span>
+    </div>
+    <div id="transcript-feed">
+      <div class="empty-state" id="transcript-empty">
+        <svg viewBox="0 0 32 32" fill="currentColor"><path d="M6 6h20v2H6V6zm0 5h20v2H6v-2zm0 5h14v2H6v-2zm0 5h8v2H6v-2z"/></svg>
+        <p>Transcript will appear here once the bot joins a meeting.</p>
+      </div>
+    </div>
+  </section>
+
+  <aside id="notes-panel" class="panel">
+    <div class="panel-header">
+      <span class="panel-header-label">AI Notes</span>
+      <span class="panel-count" id="count-notes">0</span>
+    </div>
+    <div id="notes-feed">
+      <div class="empty-state" id="notes-empty">
+        <svg viewBox="0 0 32 32" fill="currentColor"><path d="M8 4h16v2H8V4zm0 5h16v2H8V9zm0 5h10v2H8v-2zm8 5h8v8h-8v-8z"/></svg>
+        <p>Action items, blockers, and decisions will appear here.</p>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <div class="stat">Segments <strong id="stat-segments">0</strong></div>
+  <div class="stat">Speakers <strong id="stat-speakers">0</strong></div>
+  <div class="stat">Notes <strong id="stat-notes">0</strong></div>
+</footer>
+
+<div id="summary-drawer">
+  <div class="drawer-header">
+    <h2>Meeting Summary</h2>
+    <button id="btn-close-summary">✕</button>
+  </div>
+  <div id="summary-content" class="loading">Click "Summary" to generate.</div>
+</div>
+
+<script>
+  const socket = io();
+  let segmentCount = 0;
+  const speakers = new Set();
+  let notesCount = 0;
+
+  const feed       = document.getElementById("transcript-feed");
+  const notesFeed  = document.getElementById("notes-feed");
+  const pill       = document.getElementById("status-pill");
+  const statusText = document.getElementById("status-text");
+
+  function setStatus(s) {
+    statusText.textContent = s;
+    pill.className = "";
+    if (s === "connected") pill.classList.add("connected");
+    else if (s === "joining") pill.classList.add("joining");
+    else if (s.startsWith("error")) pill.classList.add("error");
+  }
+
+  // New segment arriving for the first time
+  socket.on("transcript_new", (data) => {
+    document.getElementById("transcript-empty")?.remove();
+
+    if (data.completed) {
+      segmentCount++;
+      speakers.add(data.speaker);
+      document.getElementById("stat-segments").textContent = segmentCount;
+      document.getElementById("stat-speakers").textContent = speakers.size;
+      document.getElementById("count-segments").textContent = segmentCount;
+    }
+
+    const entry = document.createElement("div");
+    entry.className = "transcript-entry" + (data.completed ? "" : " pending");
+    entry.dataset.sid = data.segment_id;
+    entry.innerHTML = `<div class="speaker">${escHtml(data.speaker)}</div><div class="text">${escHtml(data.text)}</div>`;
+    feed.appendChild(entry);
+    feed.scrollTop = feed.scrollHeight;
+  });
+
+  // Existing segment text updated (still in progress or just completed)
+  socket.on("transcript_update", (data) => {
+    const entry = feed.querySelector(`[data-sid="${CSS.escape(data.segment_id)}"]`);
+    if (!entry) return;
+    entry.querySelector(".text").textContent = data.text;
+    if (data.completed && entry.classList.contains("pending")) {
+      entry.classList.remove("pending");
+      segmentCount++;
+      document.getElementById("stat-segments").textContent = segmentCount;
+      document.getElementById("count-segments").textContent = segmentCount;
+    }
+    feed.scrollTop = feed.scrollHeight;
+  });
+
+  socket.on("moderation", (data) => {
+    document.getElementById("notes-empty")?.remove();
+    notesCount++;
+    document.getElementById("stat-notes").textContent = notesCount;
+    document.getElementById("count-notes").textContent = notesCount;
+    renderNotes(data);
+  });
+
+  socket.on("status_update", (data) => {
+    setStatus(data.status);
+    if (data.status === "left" || data.status.startsWith("error")) {
+      setToggleActive(false);
+    } else if (data.status === "connected" || data.status === "joining") {
+      setToggleActive(true);
+    }
+  });
+
+  const CARD_META = {
+    action_items: { label: "Action Items", cls: "card-action",   icon: '<path d="M8 1l1.5 3 3.5.5-2.5 2.5.5 3.5L8 9l-3 1.5.5-3.5L3 4.5 6.5 4z"/>' },
+    blockers:     { label: "Blockers",     cls: "card-blocker",  icon: '<path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 10H7.25V9.5h1.5V11zm0-3H7.25V4.5h1.5V8z"/>' },
+    decisions:    { label: "Decisions",    cls: "card-decision", icon: '<path d="M6.5 11.5L3 8l1.06-1.06 2.44 2.44 4.94-4.94L12.5 5.5z"/>' },
+    notes:        { label: "Notes",        cls: "card-notes",    icon: '<path d="M3 3h10v1.5H3V3zm0 3h10v1.5H3V6zm0 3h6v1.5H3V9z"/>' },
+  };
+
+  function renderNotes(data) {
+    notesFeed.innerHTML = "";
+    Object.entries(CARD_META).forEach(([key, meta]) => {
+      const val = data[key];
+      if (!val) return;
+      const items = Array.isArray(val) ? val.filter(Boolean) : (typeof val === "string" && val.trim() ? [val] : []);
+      if (!items.length) return;
+
+      const card = document.createElement("div");
+      card.className = `notes-card ${meta.cls}`;
+      card.innerHTML = `
+        <div class="notes-card-header">
+          <div class="notes-card-icon"><svg viewBox="0 0 16 16" fill="currentColor">${meta.icon}</svg></div>
+          <span class="notes-card-title">${meta.label}</span>
+        </div>
+        <div class="notes-card-body">
+          <ul>${items.map(i => `<li>${escHtml(String(i))}</li>`).join("")}</ul>
+        </div>`;
+      notesFeed.appendChild(card);
+    });
+
+    if (data.error) {
+      notesFeed.innerHTML = `<div class="notes-card"><div class="notes-card-body"><p style="color:var(--red)">${escHtml(data.error)}</p></div></div>`;
+    }
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  let isActive = false;
+
+  function setToggleActive(active) {
+    isActive = active;
+    const btn = document.getElementById("btn-toggle");
+    const label = document.getElementById("btn-label");
+    const icon = document.getElementById("btn-icon");
+    const urlInput = document.getElementById("meeting-url");
+
+    if (active) {
+      btn.classList.add("active");
+      label.textContent = "Stop Transcription";
+      icon.innerHTML = '<rect x="3" y="3" width="10" height="10" rx="2"/>';
+      urlInput.disabled = true;
+    } else {
+      btn.classList.remove("active");
+      label.textContent = "Start Transcription";
+      icon.innerHTML = '<path d="M8 2a3 3 0 00-3 3v4a3 3 0 006 0V5a3 3 0 00-3-3zm-5 6a5 5 0 0010 0H11.5a3.5 3.5 0 01-7 0H3zm5 5v1.5h-2V16h4v-1.5h-2V13z"/>';
+      urlInput.disabled = false;
+    }
+  }
+
+  document.getElementById("btn-toggle").addEventListener("click", async () => {
+    if (!isActive) {
+      const url = document.getElementById("meeting-url").value.trim();
+      if (!url) {
+        document.getElementById("meeting-url").focus();
+        return;
+      }
+      setToggleActive(true);
+      setStatus("joining");
+      const res = await fetch("/api/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meeting_url: url }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setStatus("error: " + data.error);
+        setToggleActive(false);
+      }
+    } else {
+      setToggleActive(false);
+      setStatus("left");
+      fetch("/api/leave", { method: "POST" });
+    }
+  });
+
+  document.getElementById("btn-summary").addEventListener("click", async () => {
+    const drawer = document.getElementById("summary-drawer");
+    const content = document.getElementById("summary-content");
+    drawer.classList.add("open");
+    content.textContent = "Generating summary…";
+    content.className = "loading";
+    const res = await fetch("/api/summary");
+    const data = await res.json();
+    content.textContent = data.summary || JSON.stringify(data, null, 2);
+    content.className = "";
+  });
+
+  document.getElementById("btn-close-summary").addEventListener("click", () => {
+    document.getElementById("summary-drawer").classList.remove("open");
+  });
+</script>
+</body>
+</html>
