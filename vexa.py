@@ -1,125 +1,134 @@
 import os
 import json
 import requests
+import threading
 import websocket
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Core Vexa API Configuration
 VEXA_API_KEY = os.getenv("VEXA_API_KEY")
-VEXA_BASE_URL = "https://api.cloud.vexa.ai"
+VEXA_API_BASE = os.getenv("VEXA_API_BASE", "https://api.cloud.vexa.ai")
 
-_headers = {"X-API-Key": VEXA_API_KEY, "Content-Type": "application/json"}
-
-
-class VexaBot:
-    def __init__(self):
-        self.native_meeting_id = None
-        self.active = False
-        self._ws = None
-        self._ws_url = None
-
-    def start(self, native_meeting_id: str):
-        """POST a bot into the meeting and capture the WebSocket URL from the response."""
-        self.native_meeting_id = native_meeting_id
-        self.active = True
-        payload = {"platform": "google_meet", "native_meeting_id": native_meeting_id}
-        resp = requests.post(f"{VEXA_BASE_URL}/bots", json=payload, headers=_headers, timeout=15)
-        if resp.status_code == 409:
-            return
-        if resp.status_code not in (200, 201):
-            resp.raise_for_status()
-        body = resp.json()
-        self._ws_url = (
-            body.get("ws_url")
-            or body.get("websocket_url")
-            or body.get("stream_url")
-        )
-
-    def stop(self):
-        """Close the WebSocket and remove the bot from the meeting."""
-        self.active = False
-        if self._ws:
-            try:
-                self._ws.close()
-            except Exception:
-                pass
-            self._ws = None
-        if self.native_meeting_id:
-            try:
-                requests.delete(
-                    f"{VEXA_BASE_URL}/bots/google_meet/{self.native_meeting_id}",
-                    headers=_headers,
-                    timeout=10,
-                )
-            except Exception:
-                pass
-            self.native_meeting_id = None
-
-    def stream(self, on_segments, on_connected=None, on_end=None):
+class VexaManager:
+    def __init__(self, socketio, on_transcript_callback=None):
         """
-        Connect to Vexa's WebSocket and call on_segments(list) for each message.
-        Blocks the calling greenlet until the connection closes.
-        Falls back to REST polling if no WebSocket URL was returned by the bot.
+        :param socketio: The Flask-SocketIO instance to emit events to the frontend.
+        :param on_transcript_callback: Optional function to pipe text to moderator.py
         """
-        if self._ws_url:
-            self._ws_stream(on_segments, on_connected, on_end)
-        else:
-            self._poll_fallback(on_segments, on_connected, on_end)
+        self.socketio = socketio
+        self.on_transcript_callback = on_transcript_callback
+        self.active_bots = {}  # Map meeting_id -> bot_id
+        self.ws_clients = {}   # Map meeting_id -> WebSocket instance
+        self.seen_segments = {} # Map segment_id -> last text
 
-    # ── WebSocket path ──────────────────────────────────────────────────────────
+    def extract_meeting_id(self, url):
+        """Extract the native meeting ID from a Google Meet URL."""
+        # e.g., https://meet.google.com/abc-defg-hij -> abc-defg-hij
+        return url.rstrip('/').split('/')[-1].split('?')[0]
 
-    def _ws_stream(self, on_segments, on_connected, on_end):
-        def _on_open(ws):
-            if on_connected:
-                on_connected()
+    def join_meeting(self, meeting_url):
+        """Trigger Vexa Bot Manager to join a meeting and start WebSocket stream."""
+        meeting_id = self.extract_meeting_id(meeting_url)
+        self.socketio.emit("status_update", {"status": "joining"})
 
-        def _on_message(ws, message):
-            if not self.active:
-                ws.close()
-                return
+        headers = {
+            "X-API-Key": VEXA_API_KEY,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "platform": "google_meet",
+            "native_meeting_id": meeting_id
+        }
+
+        try:
+            # 1. Post to Vexa API to send the bot
+            response = requests.post(f"{VEXA_API_BASE}/bots", headers=headers, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            
+            bot_id = data.get("id") or data.get("bot_id")
+            self.active_bots[meeting_id] = bot_id
+
+            # 2. Get the stream URL and start WebSocket
+            ws_url = data.get("stream_url")
+            if not ws_url:
+                # Fallback based on typical Vexa architecture API Gateway
+                ws_base = VEXA_API_BASE.replace("http", "ws")
+                ws_url = f"{ws_base}/ws/meeting/{meeting_id}"
+
+            self._start_websocket(meeting_id, ws_url)
+            return True
+        except Exception as e:
+            self.socketio.emit("status_update", {"status": "error", "message": str(e)})
+            return False
+
+    def _start_websocket(self, meeting_id, ws_url):
+        def on_message(ws, message):
             try:
                 data = json.loads(message)
-                if "transcript" in data.get("type", ""):
-                    segs = data.get("segments", [])
-                    if segs:
-                        on_segments(segs)
-            except Exception:
-                pass
+                # Handle Vexa's "transcript.mutable" frames
+                if data.get("type") == "transcript.mutable" or "segments" in data:
+                    for segment in data.get("segments", []):
+                        sid = segment.get("session_uid") or str(segment.get("start", segment.get("absolute_start_time", "")))
+                        text = (segment.get("text") or "").strip()
+                        speaker = segment.get("speaker", "Unknown Speaker")
+                        completed = segment.get("completed", False)
+                        
+                        if not sid or not text:
+                            continue
 
-        def _on_close(ws, code, msg):
-            if on_end and self.active:
-                on_end()
+                        prev_text = self.seen_segments.get(sid)
 
-        def _on_error(ws, error):
-            pass
+                        if prev_text is None:
+                            self.seen_segments[sid] = text
+                            self.socketio.emit("transcript_new", {"segment_id": sid, "text": text, "speaker": speaker, "completed": completed})
+                        elif text != prev_text:
+                            self.seen_segments[sid] = text
+                            self.socketio.emit("transcript_update", {"segment_id": sid, "text": text, "completed": completed})
+                            
+                        if completed and not self.seen_segments.get(f"{sid}:fed"):
+                            self.seen_segments[f"{sid}:fed"] = "1"
+                            if self.on_transcript_callback:
+                                self.on_transcript_callback(text, speaker)
+            except Exception as e:
+                print(f"[Vexa] WebSocket Parse Error: {e}")
 
-        self._ws = websocket.WebSocketApp(
-            self._ws_url,
-            header={"X-API-Key": VEXA_API_KEY},
-            on_open=_on_open,
-            on_message=_on_message,
-            on_close=_on_close,
-            on_error=_on_error,
+        def on_error(ws, error):
+            self.socketio.emit("status_update", {"status": f"error: {str(error)}"})
+
+        def on_close(ws, close_status_code, close_msg):
+            self.socketio.emit("status_update", {"status": "left"})
+
+        def on_open(ws):
+            self.socketio.emit("status_update", {"status": "connected"})
+
+        # Start the listener in a background thread
+        ws_app = websocket.WebSocketApp(
+            ws_url,
+            header=[f"X-API-Key: {VEXA_API_KEY}"],
+            on_open=on_open,
+            on_message=on_message,
+            on_error=on_error,
+            on_close=on_close
         )
-        self._ws.run_forever()
+        self.ws_clients[meeting_id] = ws_app
+        threading.Thread(target=ws_app.run_forever, daemon=True).start()
 
-    # ── REST polling fallback ───────────────────────────────────────────────────
-
-    def _poll_fallback(self, on_segments, on_connected, on_end):
-        import eventlet
-        if on_connected:
-            on_connected()
-        while self.active and self.native_meeting_id:
-            try:
-                url = f"{VEXA_BASE_URL}/transcripts/google_meet/{self.native_meeting_id}"
-                resp = requests.get(url, headers=_headers, timeout=10)
-                if resp.status_code == 200:
-                    segs = resp.json().get("segments", [])
-                    if segs:
-                        on_segments(segs)
-            except Exception:
-                pass
-            eventlet.sleep(1)
-        if on_end and self.active:
-            on_end()
+    def leave_meeting(self, meeting_url):
+        """Remove the bot from the meeting and close connections."""
+        meeting_id = self.extract_meeting_id(meeting_url)
+        bot_id = self.active_bots.get(meeting_id)
+        
+        if bot_id:
+            headers = {"X-API-Key": VEXA_API_KEY}
+            requests.delete(f"{VEXA_API_BASE}/bots/{bot_id}", headers=headers)
+            del self.active_bots[meeting_id]
+            
+        ws_app = self.ws_clients.get(meeting_id)
+        if ws_app:
+            ws_app.close()
+            del self.ws_clients[meeting_id]
+            
+        self.socketio.emit("status_update", {"status": "left"})

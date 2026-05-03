@@ -1,92 +1,70 @@
-I have a working Flask + SocketIO web app for Agile meeting moderation. I need to swap the local Whisper transcription for Vexa's API so a bot joins the meeting and streams the transcript instead.
+# Vexa Frontend - Developer Integration Guide
 
+This document serves as the AI assistant and developer guide for working on the Vexa Frontend (Dashboard). It explains how the frontend integrates with the wider Vexa ecosystem, including the real-time transcription systems and bot management APIs.
 
+## 🏗️ Backend Architecture Overview (How Vexa Works)
 
-\## Current stack
+To effectively build the frontend, it is crucial to understand the Vexa backend architecture:
 
-\- Python Flask + Flask-SocketIO backend (server.py)
+1. **API Gateway**: The central routing point (`http://localhost:8056` for Vexa Lite, or `https://api.cloud.vexa.ai` for hosted). It serves both REST and WebSocket traffic.
+2. **Bot Manager & Vexa Bot**: The services responsible for spinning up headless bots to join Google Meet, Teams, and Zoom. They capture audio and handle interactive controls (speak, chat, screen, avatar).
+3. **WhisperLive**: The real-time transcription engine. It uses a **LIFO + Algorithm A** buffer management system for remote connections. It strictly manages incoming audio chunks to ensure live transcription is sub-second, and handles reconfirmation of partial segments (hallucination filtering, VAD silence cutting).
+4. **Transcription Collector**: The central data aggregator that processes segments from WhisperLive via Redis.
+   * **Single Redis Cache**: Live segments are stored at `meeting:{meeting_id}:segments`.
+   * **Change-Only Mutable Publishing**: To avoid spamming the frontend WebSocket, the backend publishes `transcript.mutable` frames **only** when render-relevant fields (text, speaker, language, time) change. 
+   * **Persistence**: Stable segments (`updated_at < now - IMMUTABILITY_THRESHOLD`) are automatically flushed to PostgreSQL.
 
-\- Vanilla HTML/CSS/JS frontend (templates/index.html)
+## 🔌 Frontend-Backend Integration Points
 
-\- Real-time updates via SocketIO events: "transcript", "moderation", "call\_detected", "call\_ended", "status\_update"
+### 1. Bot Management (REST)
+To send a bot to a meeting from the UI, make a POST request to the `/bots` endpoint.
+* **Headers**: `X-API-Key: <YOUR_API_KEY>`
+* **Body (Google Meet)**: `{ "platform": "google_meet", "native_meeting_id": "abc-defg-hij" }`
+* **Body (Teams)**: Teams requires the numeric meeting ID and the passcode extracted from the Teams link.
+* **Body (Zoom)**: Requires `native_meeting_id`, `passcode`, and optionally `recording_enabled`, `transcribe_enabled`.
 
+### 2. Live Transcription Streams (WebSocket)
+The UI must rely on WebSockets to display sub-second transcripts during live calls.
+* **Events**: Listen for `transcript.mutable` frames over the meeting channel (`tc:meeting:{meeting_id}:mutable`). 
+* **Rendering**: Because the backend uses *Change-Only Publishing*, the frontend UI should confidently upsert segments into its state using `absolute_start_time` and `session_uid` as stable keys. 
+* **Important Note**: The backend **no longer emits** `transcript.finalized` frames. The UI should rely solely on the `mutable` channel for live updates and the REST API for the finalized historical record.
+* **Speaker Events**: Live speaker activity updates are routed through Redis streams and delivered via WebSockets to indicate who is currently talking.
 
+### 3. Historical Transcripts & Meeting Data (REST)
+To load past meetings or the full finalized view of an active meeting:
+* **Endpoint**: `GET /transcripts/<platform>/<native_meeting_id>`
+* **Behavior**: This endpoint merges the immutable data from the PostgreSQL database with the remaining mutable data from the Redis cache, computes absolute times, and deduplicates overlaps.
+* **Recordings**: Can be accessed via `/recordings/.../raw` with `Range` seeking (`206 Partial Content`) for native browser audio/video playback support.
 
-\## What needs to change
+## 🧬 Data Structures
 
-Replace the local audio capture pipeline with Vexa's WebSocket transcript stream. The frontend should stay the same, only the backend data source changes.
+When dealing with transcript segments in the UI, expect the following normalized schema from the backend:
+```json
+{
+  "session_uid": "string (UUID)",
+  "text": "string",
+  "speaker": "string (mapped from speaker events)",
+  "language": "string (e.g., 'en')",
+  "start_time": "float (relative)",
+  "end_time": "float (relative)",
+  "absolute_start_time": "string (ISO 8601)",
+  "absolute_end_time": "string (ISO 8601)",
+  "completed": "boolean"
+}
+```
+*Use `completed: false` to style partial/unstable text (e.g., lower opacity or italics).*
 
+## 💻 Development Commands
 
+*(Assuming standard Node.js based frontend environment)*
+- `npm install` - Install frontend dependencies
+- `npm run dev` - Start local development server
+- `npm run build` - Build for production
 
-\## What I need built
+**Local Testing Environment**:
+Make sure the Vexa backend is running locally via Docker Compose (`make all` from the root Vexa directory) before starting the frontend, and point your local `.env` `API_BASE` to `http://localhost:8056`.
 
-
-
-1\. \*\*Vexa integration module (vexa.py)\*\*
-
-&#x20;  - POST to https://api.cloud.vexa.ai/bots to send a bot into a meeting given a meeting ID
-
-&#x20;  - Connect to Vexa's WebSocket and stream real-time transcript segments
-
-&#x20;  - On each transcript segment, emit a SocketIO "transcript" event to the frontend with the text and speaker name
-
-&#x20;  - Handle bot stop (DELETE /bots/{bot\_id})
-
-&#x20;  - Vexa WebSocket docs: transcript messages have type "transcript.mutable" with segments containing text, speaker, and timestamps
-
-
-
-2\. \*\*New Flask routes in server.py\*\*
-
-&#x20;  - POST /api/join  { "meeting\_url": "https://meet.google.com/abc-xyz" } → extract meeting ID, start Vexa bot, begin streaming
-
-&#x20;  - POST /api/leave → stop the bot and close WebSocket
-
-
-
-3\. \*\*Updated UI (index.html)\*\*
-
-&#x20;  - Replace the auto-detect call banner with a simple input field for the meeting URL and a "Join" button
-
-&#x20;  - Keep the existing transcript feed, AI notes panel, footer stats, and summary drawer exactly as they are
-
-&#x20;  - Show the bot status (joining, connected, left) in the existing status indicator
-
-
-
-\## Vexa API details
-
-\- Base URL: https://api.cloud.vexa.ai
-
-\- Auth header: X-API-Key: {api\_key}
-
-\- Start bot: POST /bots { "platform": "google\_meet", "native\_meeting\_id": "abc-defg-hij" }
-
-\- WebSocket: connect to the stream URL returned in the bot response
-
-\- Each WebSocket message is JSON with segments array containing { text, speaker, start, end }
-
-
-
-\## API key
-
-Store in a .env file as VEXA\_API\_KEY and load with python-dotenv
-
-
-
-\## Keep intact
-
-\- All existing SocketIO events and handlers
-
-\- The AI notes/moderation pipeline (moderator.py) feed Vexa transcript text into it exactly as before
-
-\- The summary endpoint
-
-\- The existing UI design and layout
-
-
-
-\## File structure
-
-server.py, vexa.py, moderator.py, templates/index.html, .env, requirements.txt
-
+## 🤖 Claude/AI Assistant Prompting Guidelines
+- Prioritize fetching the latest WebSocket payload shapes from the API gateway when adding new transcription rendering logic.
+- Be mindful of the "Change-Only" architecture: do not create local debouncing logic for transcription updates, as the backend collector already optimizes the payload delivery.
+- Always use absolute paths for routing imports inside the frontend source tree.
