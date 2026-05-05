@@ -678,11 +678,13 @@
   });
 
   socket.on("moderation", (data) => {
+    const summary = (data.summary || "").trim();
+    if (!summary) return;
     document.getElementById("notes-empty")?.remove();
     notesCount++;
     document.getElementById("stat-notes").textContent = notesCount;
     document.getElementById("count-notes").textContent = notesCount;
-    renderNotes(data);
+    appendInsight(summary);
   });
 
   socket.on("status_update", (data) => {
@@ -694,37 +696,17 @@
     }
   });
 
-  const CARD_META = {
-    action_items: { label: "Action Items", cls: "card-action",   icon: '<path d="M8 1l1.5 3 3.5.5-2.5 2.5.5 3.5L8 9l-3 1.5.5-3.5L3 4.5 6.5 4z"/>' },
-    blockers:     { label: "Blockers",     cls: "card-blocker",  icon: '<path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 10H7.25V9.5h1.5V11zm0-3H7.25V4.5h1.5V8z"/>' },
-    decisions:    { label: "Decisions",    cls: "card-decision", icon: '<path d="M6.5 11.5L3 8l1.06-1.06 2.44 2.44 4.94-4.94L12.5 5.5z"/>' },
-    notes:        { label: "Notes",        cls: "card-notes",    icon: '<path d="M3 3h10v1.5H3V3zm0 3h10v1.5H3V6zm0 3h6v1.5H3V9z"/>' },
-  };
-
-  function renderNotes(data) {
-    notesFeed.innerHTML = "";
-    Object.entries(CARD_META).forEach(([key, meta]) => {
-      const val = data[key];
-      if (!val) return;
-      const items = Array.isArray(val) ? val.filter(Boolean) : (typeof val === "string" && val.trim() ? [val] : []);
-      if (!items.length) return;
-
-      const card = document.createElement("div");
-      card.className = `notes-card ${meta.cls}`;
-      card.innerHTML = `
-        <div class="notes-card-header">
-          <div class="notes-card-icon"><svg viewBox="0 0 16 16" fill="currentColor">${meta.icon}</svg></div>
-          <span class="notes-card-title">${meta.label}</span>
-        </div>
-        <div class="notes-card-body">
-          <ul>${items.map(i => `<li>${escHtml(String(i))}</li>`).join("")}</ul>
-        </div>`;
-      notesFeed.appendChild(card);
-    });
-
-    if (data.error) {
-      notesFeed.innerHTML = `<div class="notes-card"><div class="notes-card-body"><p style="color:var(--red)">${escHtml(data.error)}</p></div></div>`;
-    }
+  function appendInsight(summary) {
+    const card = document.createElement("div");
+    card.className = "notes-card card-notes";
+    card.innerHTML = `
+      <div class="notes-card-header">
+        <div class="notes-card-icon"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 3h10v1.5H3V3zm0 3h10v1.5H3V6zm0 3h6v1.5H3V9z"/></svg></div>
+        <span class="notes-card-title">AI Insight</span>
+      </div>
+      <div class="notes-card-body"><p>${escHtml(summary)}</p></div>`;
+    notesFeed.appendChild(card);
+    notesFeed.scrollTop = notesFeed.scrollHeight;
   }
 
   function escHtml(s) {

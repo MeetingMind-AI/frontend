@@ -3,5 +3,4 @@ flask-socketio
 python-dotenv
 requests
 websocket-client
-openai
 eventlet
