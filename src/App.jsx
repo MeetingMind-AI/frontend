@@ -16,7 +16,7 @@ function App() {
         <Route path="parking-lot" element={<GlobalParkingLot />} />
         <Route path="schedule" element={<GlobalSchedule />} />
       </Route>
-      <Route path="/live" element={<Live />} />
+      <Route path="/live/:meetingId" element={<Live />} />
       <Route path="/review" element={<Review />} />
     </Routes>
   )

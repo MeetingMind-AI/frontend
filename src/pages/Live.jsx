@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { mockTranscript, mockPreviousParkingLot } from '../mockData'
+import { leaveMeeting, openInsightSocket } from '../api'
 import './Live.css'
 
 function playBeep() {
@@ -52,20 +53,47 @@ const CLARITY_CONTENT = {
 
 function Live() {
   const navigate = useNavigate()
+  const { meetingId } = useParams()
+  const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
+
   const [transcript, setTranscript] = useState(mockTranscript.slice(0, 4))
   const [bannerOpen, setBannerOpen] = useState(true)
   const [conflict, setConflict] = useState(false)
   const [autoMode, setAutoMode] = useState(false)
   const [clarityModal, setClarityModal] = useState(null)
   const [elapsed, setElapsed] = useState(549) // start at ~9 min into meeting
+  const [liveInsights, setLiveInsights] = useState([])
 
   const transcriptEndRef = useRef(null)
   const transcriptIdxRef = useRef(4)
+  const sentCountRef = useRef(0)
   const autoModeRef = useRef(false)
+  const wsRef = useRef(null)
 
   useEffect(() => {
     autoModeRef.current = autoMode
   }, [autoMode])
+
+  // Open backend WebSocket for AI insights
+  useEffect(() => {
+    if (!parsedMeetingId) return
+    const ws = openInsightSocket(parsedMeetingId, {
+      onInsight: ({ role, text }) =>
+        setLiveInsights((prev) => [...prev, { role, text }]),
+    })
+    wsRef.current = ws
+    return () => { ws.close(); wsRef.current = null }
+  }, [parsedMeetingId])
+
+  // Send new transcript entries to backend as they arrive
+  useEffect(() => {
+    if (!wsRef.current) return
+    while (sentCountRef.current < transcript.length) {
+      const entry = transcript[sentCountRef.current]
+      wsRef.current.send(entry.speaker, entry.text)
+      sentCountRef.current++
+    }
+  }, [transcript])
 
   // Meeting clock
   useEffect(() => {
@@ -175,7 +203,12 @@ function Live() {
               <span className="live-toggle-knob" />
             </button>
           </div>
-          <button className="live-end-btn" onClick={() => navigate('/review')}>
+          <button className="live-end-btn" onClick={async () => {
+            if (parsedMeetingId) {
+              try { await leaveMeeting(parsedMeetingId) } catch {}
+            }
+            navigate('/review')
+          }}>
             End Meeting
           </button>
         </div>
@@ -261,6 +294,25 @@ function Live() {
           </svg>
           Explain — Business
         </button>
+        {parsedMeetingId && (
+          <button
+            className="live-clarity-btn live-clarity-btn--ai"
+            onClick={() => setClarityModal({ type: 'insights' })}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            AI Insights
+            {liveInsights.length > 0 && (
+              <span style={{
+                marginLeft: '5px', background: 'var(--accent)', color: '#fff',
+                borderRadius: '99px', padding: '1px 6px', fontSize: '11px', fontWeight: 600,
+              }}>
+                {liveInsights.length}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Panel E — Conflict Detection Toast */}
@@ -302,7 +354,9 @@ function Live() {
         <div className="live-modal-backdrop" onClick={() => setClarityModal(null)}>
           <div className="live-modal" onClick={(e) => e.stopPropagation()}>
             <div className="live-modal-header">
-              <span className="live-modal-title">{clarityModal.title}</span>
+              <span className="live-modal-title">
+                {clarityModal.type === 'insights' ? 'Live AI Insights' : clarityModal.title}
+              </span>
               <button className="live-modal-close" onClick={() => setClarityModal(null)}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -311,11 +365,32 @@ function Live() {
               </button>
             </div>
             <div className="live-modal-body">
-              {clarityModal.lines.map((line, i) => (
-                <p key={i} className={`live-modal-line ${line === '' ? 'live-modal-line--spacer' : ''}`}>
-                  {line}
-                </p>
-              ))}
+              {clarityModal.type === 'insights' ? (
+                liveInsights.length === 0 ? (
+                  <p className="live-modal-line" style={{ color: 'var(--text-3)' }}>
+                    No insights yet — they'll appear as the transcript is processed.
+                  </p>
+                ) : (
+                  liveInsights.map((ins, i) => (
+                    <div key={i} style={{ marginBottom: '12px' }}>
+                      <span style={{
+                        fontSize: '10px', fontWeight: 600, textTransform: 'uppercase',
+                        letterSpacing: '0.07em', color: 'var(--accent)', display: 'block',
+                        marginBottom: '3px',
+                      }}>
+                        {ins.role.replace(/_/g, ' ')}
+                      </span>
+                      <p className="live-modal-line">{ins.text}</p>
+                    </div>
+                  ))
+                )
+              ) : (
+                clarityModal.lines.map((line, i) => (
+                  <p key={i} className={`live-modal-line ${line === '' ? 'live-modal-line--spacer' : ''}`}>
+                    {line}
+                  </p>
+                ))
+              )}
             </div>
             <div className="live-modal-footer">
               <button className="live-modal-dismiss" onClick={() => setClarityModal(null)}>

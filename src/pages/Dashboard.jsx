@@ -1,7 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mockPreviousMeetings } from '../mockData'
+import { startMeeting } from '../api'
 import './Dashboard.css'
+
+function extractNativeId(url) {
+  try {
+    return new URL(url).pathname.split('/').filter(Boolean).pop() || null
+  } catch {
+    return url.trim().split('/').filter(Boolean).pop() || null
+  }
+}
 
 function speakerColor(name) {
   const colors = ['#4f8ef7', '#3fb950', '#bc8cff', '#d29922', '#e3884c', '#f85149']
@@ -109,14 +118,27 @@ function MeetingCard({ meeting }) {
 export default function Dashboard() {
   const navigate = useNavigate()
   const [url, setUrl] = useState('')
-  const [dispatchState, setDispatchState] = useState('idle') // idle | loading | done
+  const [dispatchState, setDispatchState] = useState('idle') // idle | loading | done | error
+  const [dispatchError, setDispatchError] = useState('')
   const [filter, setFilter] = useState('all') // all | pending | reviewed
 
-  const handleDispatch = () => {
-    if (!url.trim()) return
+  const handleDispatch = async () => {
+    if (!url.trim() || dispatchState !== 'idle') return
+    const nativeId = extractNativeId(url.trim())
+    if (!nativeId) {
+      setDispatchError('Invalid Google Meet URL')
+      return
+    }
     setDispatchState('loading')
-    setTimeout(() => setDispatchState('done'), 1800)
-    setTimeout(() => navigate('/live'), 2800)
+    setDispatchError('')
+    try {
+      const { meeting_id } = await startMeeting('google_meet', nativeId)
+      setDispatchState('done')
+      setTimeout(() => navigate(`/live/${meeting_id}`), 800)
+    } catch (err) {
+      setDispatchState('idle')
+      setDispatchError(err.message)
+    }
   }
 
   const filtered = mockPreviousMeetings.filter((m) => {
@@ -178,7 +200,7 @@ export default function Dashboard() {
               type="url"
               placeholder="https://meet.google.com/abc-defg-hij"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => { setUrl(e.target.value); setDispatchError('') }}
               onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}
               disabled={dispatchState !== 'idle'}
             />
@@ -214,6 +236,12 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {dispatchError && (
+        <p style={{ color: 'var(--red)', fontSize: '13px', marginTop: '-8px', marginBottom: '8px', paddingLeft: '4px' }}>
+          {dispatchError}
+        </p>
+      )}
 
       {/* Meetings section */}
       <div className="dash-meetings-section">
