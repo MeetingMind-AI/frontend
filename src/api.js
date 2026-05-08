@@ -1,4 +1,13 @@
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+// HTTP requests use relative paths — Nginx proxies /api/* to the backend.
+// VITE_API_URL is kept as an escape hatch for local dev without Docker.
+const BASE = import.meta.env.VITE_API_URL ?? ''
+
+// Derive the WebSocket base from the current page origin so it also goes
+// through Nginx (same host, same port, no CORS).
+function wsBase() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${window.location.host}`
+}
 
 export async function startMeeting(platform, nativeId) {
   const res = await fetch(`${BASE}/api/meetings/start`, {
@@ -29,8 +38,7 @@ export async function leaveMeeting(meetingId) {
 // Calls onInsight({ role, text }) for each non-IGNORE Ollama summary received.
 // Returns { send, close }.
 export function openInsightSocket(meetingId, { onInsight, onOpen, onClose } = {}) {
-  const wsBase = BASE.replace(/^https/, 'wss').replace(/^http/, 'ws')
-  const ws = new WebSocket(`${wsBase}/api/ws/ingest/${meetingId}`)
+  const ws = new WebSocket(`${wsBase()}/api/ws/ingest/${meetingId}`)
 
   ws.onopen = () => onOpen?.()
   ws.onclose = () => onClose?.()
