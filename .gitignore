@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+
+# Claude AI assistant guide — local only, not for version control
+CLAUDE.md
+
+# Python leftovers from old Flask frontend (flask-legacy branch)
+__pycache__/
+*.pyc
+templates/
+server.py
+vexa.py
+moderator.py
+requirements.txt
