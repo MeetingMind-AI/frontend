@@ -40,11 +40,23 @@ class VexaManager:
         def on_message(ws, message):
             try:
                 data = json.loads(message)
-                summary = (data.get("summary") or "").strip()
-                if summary and summary.upper() != "IGNORE":
-                    self.socketio.emit("moderation", {"summary": summary})
-                    if self.on_summary:
-                        self.on_summary(summary)
+                summary_data = data.get("summary")
+                if not summary_data:
+                    return
+                # controller.summarize() returns dict[role -> text]
+                if isinstance(summary_data, dict):
+                    for role, text in summary_data.items():
+                        text = (text or "").strip()
+                        if text and text.upper() != "IGNORE":
+                            self.socketio.emit("moderation", {"role": role, "summary": text})
+                            if self.on_summary:
+                                self.on_summary(text)
+                else:
+                    text = str(summary_data).strip()
+                    if text and text.upper() != "IGNORE":
+                        self.socketio.emit("moderation", {"summary": text})
+                        if self.on_summary:
+                            self.on_summary(text)
             except Exception as e:
                 print(f"[Backend WS] Parse error: {e}")
 
