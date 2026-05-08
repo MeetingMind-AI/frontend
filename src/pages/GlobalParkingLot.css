@@ -1,0 +1,266 @@
+.pl-page {
+  padding: 28px 32px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 100%;
+}
+
+/* ── Header ── */
+.pl-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pl-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-0);
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+
+.pl-page-sub {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.pl-header-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  flex-shrink: 0;
+}
+
+.pl-header-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.pl-header-num {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+
+.pl-header-label {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.pl-header-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+}
+
+/* ── Filters ── */
+.pl-filters {
+  display: flex;
+  gap: 4px;
+}
+
+.pl-filter-tab {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.pl-filter-tab:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+
+.pl-filter-tab--active {
+  background: var(--bg-3);
+  border-color: var(--border);
+  color: var(--text-1);
+}
+
+/* ── Grouped list ── */
+.pl-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pl-group {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.pl-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-3);
+}
+
+.pl-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.pl-group-meta {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.pl-group-items {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Individual item ── */
+.pl-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-muted);
+  transition: background 0.12s;
+}
+
+.pl-item:last-child {
+  border-bottom: none;
+}
+
+.pl-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pl-item--resolved {
+  opacity: 0.6;
+}
+
+.pl-item--resolved:hover {
+  opacity: 0.8;
+}
+
+.pl-item-toggle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: border-color 0.12s, background 0.12s;
+  cursor: pointer;
+}
+
+.pl-item-toggle:hover {
+  border-color: var(--accent);
+}
+
+.pl-item-toggle--done {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.pl-item-p {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--yellow);
+  letter-spacing: 0.3px;
+}
+
+.pl-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pl-item-text {
+  font-size: 13px;
+  color: var(--text-1);
+  line-height: 1.55;
+  margin-bottom: 6px;
+}
+
+.pl-item--resolved .pl-item-text {
+  text-decoration: line-through;
+  color: var(--text-2);
+}
+
+.pl-item-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pl-item-status {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+
+.pl-item-status--open {
+  color: var(--yellow);
+  background: var(--yellow-dim);
+}
+
+.pl-item-status--resolved {
+  color: var(--green);
+  background: var(--green-dim);
+}
+
+.pl-item-date {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.pl-item-action {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.pl-item-action:hover {
+  color: var(--text-1);
+  background: var(--bg-3);
+}
+
+/* ── Empty ── */
+.pl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px;
+  color: var(--text-3);
+  font-size: 13px;
+}

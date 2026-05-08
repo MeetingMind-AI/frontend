@@ -1,0 +1,543 @@
+.gk-page {
+  padding: 28px 32px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 100%;
+}
+
+/* ── Header ── */
+.gk-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.gk-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-0);
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+
+.gk-page-sub {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.gk-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gk-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gk-filter-label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.gk-select {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-size: 13px;
+  font-family: var(--font);
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.gk-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Tabs ── */
+.gk-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+  margin-bottom: 4px;
+}
+
+.gk-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  padding: 9px 16px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+  background: transparent;
+  margin-bottom: -1px;
+}
+
+.gk-tab:hover {
+  color: var(--text-1);
+  background: var(--bg-3);
+}
+
+.gk-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(79, 142, 247, 0.06);
+}
+
+.gk-tab-count {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--bg-4);
+  color: var(--text-2);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.gk-tab--active .gk-tab-count {
+  background: rgba(79, 142, 247, 0.2);
+  color: var(--accent);
+}
+
+.gk-tab-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--yellow);
+  color: var(--bg-1);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* ── Summary bar ── */
+.gk-summary {
+  display: flex;
+  gap: 24px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 20px;
+}
+
+.gk-summary-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.gk-summary-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-0);
+  letter-spacing: -0.3px;
+}
+
+.gk-summary-label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* ── 3-column board ── */
+.gk-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+/* ── Column ── */
+.gk-col {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.gk-col--dragover {
+  border-color: var(--col-accent, var(--accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--col-accent, var(--accent)) 15%, transparent);
+}
+
+.gk-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-3);
+}
+
+.gk-col-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gk-col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gk-col-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.gk-col-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  background: var(--bg-4);
+  padding: 1px 7px;
+  border-radius: 20px;
+}
+
+.gk-col-cards {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+/* ── Task card ── */
+.gk-drag-wrap {
+  cursor: grab;
+}
+
+.gk-drag-wrap:active {
+  cursor: grabbing;
+}
+
+.gk-card {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.gk-card:hover {
+  border-color: var(--bg-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.gk-card-meeting {
+  font-size: 10px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gk-card-title {
+  font-size: 13px;
+  color: var(--text-1);
+  line-height: 1.5;
+}
+
+.gk-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gk-card-date {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.gk-card-move {
+  display: flex;
+  gap: 3px;
+}
+
+.gk-move-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+
+.gk-move-btn:hover {
+  color: var(--text-1);
+  background: var(--bg-4);
+}
+
+.gk-move-btn--forward:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ── Empty column ── */
+.gk-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: var(--text-3);
+  font-size: 11px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+/* ── To Schedule list ── */
+.gk-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.gk-schedule-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gk-schedule-group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 0 8px;
+}
+
+.gk-schedule-group-count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.gk-schedule-group-count--warn {
+  background: var(--yellow-dim);
+  color: var(--yellow);
+}
+
+.gk-schedule-group-count--green {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.gk-schedule-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  position: relative;
+  transition: border-color 0.12s;
+}
+
+.gk-schedule-row:hover {
+  border-color: var(--bg-4);
+}
+
+.gk-schedule-row--scheduled {
+  border-color: rgba(63, 185, 80, 0.2);
+  background: rgba(63, 185, 80, 0.02);
+}
+
+.gk-schedule-row-left {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.gk-schedule-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+}
+
+.gk-schedule-icon--done {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.gk-schedule-row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.gk-schedule-row-title {
+  font-size: 13px;
+  color: var(--text-1);
+  line-height: 1.5;
+  margin-bottom: 5px;
+}
+
+.gk-schedule-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-3);
+  flex-wrap: wrap;
+}
+
+.gk-schedule-date-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+  font-weight: 500;
+}
+
+.gk-schedule-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.gk-sched-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.gk-sched-btn--schedule {
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(79, 142, 247, 0.25);
+}
+
+.gk-sched-btn--schedule:hover {
+  background: rgba(79, 142, 247, 0.2);
+  border-color: var(--accent);
+}
+
+.gk-sched-btn--reschedule {
+  color: var(--text-2);
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+}
+
+.gk-sched-btn--reschedule:hover {
+  color: var(--text-1);
+  background: var(--bg-4);
+}
+
+.gk-sched-btn--remove {
+  color: var(--red);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 5px 8px;
+}
+
+.gk-sched-btn--remove:hover {
+  background: var(--red-dim);
+  border-color: rgba(248, 81, 73, 0.2);
+}
+
+/* ── Date picker popover ── */
+.gk-date-picker {
+  position: absolute;
+  right: 16px;
+  top: calc(100% + 6px);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  min-width: 180px;
+}
+
+.gk-date-picker-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.gk-date-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-1);
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  transition: background 0.1s;
+}
+
+.gk-date-option:hover {
+  background: var(--bg-3);
+}
+
+.gk-date-option--selected {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ── Schedule empty state ── */
+.gk-schedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .gk-board {
+    grid-template-columns: 1fr;
+  }
+}

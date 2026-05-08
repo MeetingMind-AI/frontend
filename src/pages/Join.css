@@ -1,0 +1,250 @@
+.join-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-1);
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% -10%, rgba(79, 142, 247, 0.12) 0%, transparent 60%);
+  padding: 24px;
+}
+
+.join-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Logo */
+.join-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.join-logo-mark {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.join-logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-0);
+  letter-spacing: -0.3px;
+}
+
+/* Hero */
+.join-hero {
+  margin-bottom: 24px;
+}
+
+.join-hero h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-0);
+  letter-spacing: -0.4px;
+  margin-bottom: 8px;
+}
+
+.join-hero p {
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* Agent badges */
+.join-agents {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.join-agent-badge {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.join-agent-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.join-agent-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.join-agent-desc {
+  font-size: 10px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* Form */
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.join-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.join-input-group {
+  display: flex;
+  align-items: center;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.join-input-group:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.14);
+}
+
+.join-input-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 14px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.join-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-1);
+  font-size: 14px;
+  padding: 13px 14px 13px 0;
+  min-width: 0;
+}
+
+.join-input::placeholder {
+  color: var(--text-3);
+}
+
+.join-input:disabled {
+  opacity: 0.5;
+}
+
+/* Button */
+.join-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 13px 24px;
+  border-radius: var(--radius);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(79, 142, 247, 0.3);
+}
+
+.join-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 4px 16px rgba(79, 142, 247, 0.4);
+}
+
+.join-btn:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.join-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.join-btn--loading {
+  background: var(--bg-4) !important;
+  color: var(--text-2) !important;
+  box-shadow: none !important;
+}
+
+.join-btn--success {
+  background: var(--green) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(63, 185, 80, 0.3) !important;
+}
+
+.join-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(139, 148, 158, 0.3);
+  border-top-color: var(--text-2);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Feature pills */
+.join-features {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.join-feature {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.join-feature-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@media (max-width: 540px) {
+  .join-card {
+    padding: 28px 20px;
+  }
+  .join-agents {
+    flex-direction: column;
+  }
+  .join-features {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}

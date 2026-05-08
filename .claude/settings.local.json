@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Read(//home/bertan/projects/**)",
+      "Bash(npx create-vite@latest front-end-trial --template react)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:5173/)"
+    ]
+  }
+}
