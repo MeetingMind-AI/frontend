@@ -102,7 +102,7 @@ function MeetingCard({ meeting }) {
       <div className="dash-card-footer">
         <button
           className={`dash-card-cta ${!meeting.reviewed ? 'dash-card-cta--pending' : ''}`}
-          onClick={() => navigate('/review')}
+          onClick={() => navigate(`/review/${meeting.id}`)}
         >
           {meeting.reviewed ? 'View Review' : 'Open Review'}
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

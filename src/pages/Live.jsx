@@ -63,6 +63,9 @@ function Live() {
   const [clarityModal, setClarityModal] = useState(null)
   const [elapsed, setElapsed] = useState(549) // start at ~9 min into meeting
   const [liveInsights, setLiveInsights] = useState([])
+  const [wsStatus, setWsStatus] = useState(parsedMeetingId ? 'connecting' : 'disconnected')
+
+  const MAX_INSIGHTS = 50
 
   const transcriptEndRef = useRef(null)
   const transcriptIdxRef = useRef(4)
@@ -78,8 +81,13 @@ function Live() {
   useEffect(() => {
     if (!parsedMeetingId) return
     const ws = openInsightSocket(parsedMeetingId, {
+      onOpen: () => setWsStatus('connected'),
+      onClose: () => setWsStatus('disconnected'),
       onInsight: ({ role, text }) =>
-        setLiveInsights((prev) => [...prev, { role, text }]),
+        setLiveInsights((prev) => {
+          const next = [...prev, { role, text }]
+          return next.length > MAX_INSIGHTS ? next.slice(-MAX_INSIGHTS) : next
+        }),
     })
     wsRef.current = ws
     return () => { ws.close(); wsRef.current = null }
@@ -295,6 +303,7 @@ function Live() {
           Explain — Business
         </button>
         {parsedMeetingId && (
+          <>
           <button
             className="live-clarity-btn live-clarity-btn--ai"
             onClick={() => setClarityModal({ type: 'insights' })}
@@ -312,6 +321,11 @@ function Live() {
               </span>
             )}
           </button>
+          <div className="live-ws-status">
+            <span className={`live-ws-dot live-ws-dot--${wsStatus}`} />
+            {wsStatus === 'connected' ? 'AI connected' : wsStatus === 'connecting' ? 'Connecting…' : 'AI offline'}
+          </div>
+          </>
         )}
       </div>
 

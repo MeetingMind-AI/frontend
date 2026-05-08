@@ -102,8 +102,10 @@
   gap: 9px;
   padding: 7px 8px;
   border-radius: var(--radius);
-  cursor: default;
+  cursor: pointer;
   transition: background 0.12s;
+  text-decoration: none;
+  color: inherit;
 }
 
 .sidebar-recent-item:hover {

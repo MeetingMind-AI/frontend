@@ -17,7 +17,7 @@ function App() {
         <Route path="schedule" element={<GlobalSchedule />} />
       </Route>
       <Route path="/live/:meetingId" element={<Live />} />
-      <Route path="/review" element={<Review />} />
+      <Route path="/review/:meetingId?" element={<Review />} />
     </Routes>
   )
 }

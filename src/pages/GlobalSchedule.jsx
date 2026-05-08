@@ -68,18 +68,21 @@ function ScheduleRow({ item, onSchedule, onRemove }) {
       </div>
 
       {pickerOpen && (
-        <div className="gk-date-picker">
-          <p className="gk-date-picker-label">Pick a date</p>
-          {MOCK_DATES.map((d) => (
-            <button
-              key={d}
-              className={`gk-date-option ${item.scheduledDate === d ? 'gk-date-option--selected' : ''}`}
-              onClick={() => { onSchedule(item.id, d); setPickerOpen(false) }}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onClick={() => setPickerOpen(false)} />
+          <div className="gk-date-picker" style={{ zIndex: 10 }}>
+            <p className="gk-date-picker-label">Pick a date</p>
+            {MOCK_DATES.map((d) => (
+              <button
+                key={d}
+                className={`gk-date-option ${item.scheduledDate === d ? 'gk-date-option--selected' : ''}`}
+                onClick={() => { onSchedule(item.id, d); setPickerOpen(false) }}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

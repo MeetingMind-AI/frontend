@@ -48,7 +48,9 @@ export function openInsightSocket(meetingId, { onInsight, onOpen, onClose } = {}
       } else if (typeof summary === 'string' && summary.toUpperCase() !== 'IGNORE') {
         onInsight?.({ role: 'insight', text: summary })
       }
-    } catch {}
+    } catch (e) {
+      console.warn('[WS] failed to parse message', e)
+    }
   }
 
   return {

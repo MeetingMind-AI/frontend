@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Link, Outlet } from 'react-router-dom'
 import { mockPreviousMeetings } from '../mockData'
 import './AppLayout.css'
 
@@ -81,7 +81,7 @@ export default function AppLayout() {
         <div className="sidebar-recent">
           <p className="sidebar-nav-label">Recent Meetings</p>
           {mockPreviousMeetings.slice(0, 5).map((m) => (
-            <div className="sidebar-recent-item" key={m.id}>
+            <Link to={`/review/${m.id}`} className="sidebar-recent-item" key={m.id}>
               <div className="sidebar-recent-avatars">
                 {m.participants.slice(0, 2).map((p) => (
                   <div
@@ -101,7 +101,7 @@ export default function AppLayout() {
                   {!m.reviewed && <span className="sidebar-recent-dot" />}
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </aside>
