@@ -61,6 +61,7 @@ function Live() {
   const { demo } = useDemoMode()
 
   const [transcript, setTranscript] = useState(demo ? mockTranscript.slice(0, 4) : [])
+  const [transcriptLoading, setTranscriptLoading] = useState(!demo && !!parsedMeetingId)
   const [bannerOpen, setBannerOpen] = useState(true)
   const [conflict, setConflict] = useState(false)
   const [autoMode, setAutoMode] = useState(false)
@@ -106,7 +107,7 @@ function Live() {
     return () => { ws.close(); wsRef.current = null }
   }, [parsedMeetingId])
 
-  // Poll real transcript from backend every 10s (real mode only)
+  // Poll real transcript from backend every 5s (real mode only)
   useEffect(() => {
     if (demo || !parsedMeetingId) return
 
@@ -114,6 +115,7 @@ function Live() {
       try {
         const data = await getTranscript(parsedMeetingId)
         const chunks = data.chunks ?? []
+        setTranscriptLoading(false)
         if (chunks.length === 0) return
         setTranscript(
           chunks.map((c) => ({
@@ -126,11 +128,12 @@ function Live() {
         )
       } catch (e) {
         console.warn('[Live] transcript poll failed:', e)
+        setTranscriptLoading(false)
       }
     }
 
     poll()
-    const t = setInterval(poll, 10000)
+    const t = setInterval(poll, 5000)
     return () => clearInterval(t)
   }, [demo, parsedMeetingId])
 
@@ -310,6 +313,21 @@ function Live() {
             </div>
           </div>
           <div className="live-transcript-feed">
+            {transcriptLoading && transcript.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '12px', color: 'var(--text-3)', paddingTop: '60px' }}>
+                <div className="live-typing" style={{ gap: '5px' }}>
+                  <span className="live-typing-dot" style={{ animationDelay: '0ms' }} />
+                  <span className="live-typing-dot" style={{ animationDelay: '200ms' }} />
+                  <span className="live-typing-dot" style={{ animationDelay: '400ms' }} />
+                </div>
+                <span style={{ fontSize: '13px' }}>Connecting to transcription...</span>
+              </div>
+            )}
+            {!transcriptLoading && transcript.length === 0 && !demo && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-3)', fontSize: '13px', paddingTop: '60px' }}>
+                No transcript captured yet — speak to begin.
+              </div>
+            )}
             {transcript.map((msg) => (
               <div className="live-msg" key={msg.id}>
                 <div className="live-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
