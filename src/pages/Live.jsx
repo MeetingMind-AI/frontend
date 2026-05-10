@@ -265,7 +265,7 @@ function Live() {
             if (parsedMeetingId) {
               try { await leaveMeeting(parsedMeetingId) } catch {}
             }
-            navigate('/review')
+            navigate(parsedMeetingId ? `/review/${parsedMeetingId}` : '/review')
           }}>
             End Meeting
           </button>
