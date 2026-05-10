@@ -28,7 +28,13 @@ export async function startMeeting(platform, nativeId) {
     body: JSON.stringify({ platform, native_id: nativeId }),
   })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
+    const text = await res.text()
+    console.log('[api] raw response text:', text)
+    let body
+    try { body = JSON.parse(text) } catch { body = {} }
+    console.log('[api] parsed body:', body)
+    console.log('[api] body.detail:', body.detail)
+    console.log('[api] Array.isArray:', Array.isArray(body.detail))
     throw new Error(extractError(body, res.status))
   }
   return res.json() // { meeting_id: number }
