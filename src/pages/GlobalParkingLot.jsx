@@ -1,11 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { mockAllParkingLotItems } from '../mockData'
+import { getMeetings } from '../api'
 import { useDemoMode } from '../DemoContext'
+import { buildParkingLotItems } from '../utils'
 import './GlobalParkingLot.css'
 
 export default function GlobalParkingLot() {
   const { demo } = useDemoMode()
   const [items, setItems] = useState(demo ? mockAllParkingLotItems : [])
+
+  useEffect(() => {
+    if (demo) return
+    getMeetings()
+      .then((data) => setItems(buildParkingLotItems(data.meetings ?? [])))
+      .catch(() => {})
+  }, [demo])
   const [filter, setFilter] = useState('all') // all | open | resolved
 
   const toggleStatus = (id) => {

@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { mockAllKanbanTasks } from '../mockData'
+import { getMeetings } from '../api'
 import { useDemoMode } from '../DemoContext'
+import { buildKanbanTasks } from '../utils'
 import './GlobalKanban.css'
 
 const COLS = [
@@ -50,6 +52,13 @@ export default function GlobalKanban() {
   const [tasks, setTasks] = useState(
     demo ? mockAllKanbanTasks.filter((t) => t.type === 'todo') : []
   )
+
+  useEffect(() => {
+    if (demo) return
+    getMeetings()
+      .then((data) => setTasks(buildKanbanTasks(data.meetings ?? [])))
+      .catch(() => {})
+  }, [demo])
   const [dragOver, setDragOver] = useState(null)
   const [filterMeeting, setFilterMeeting] = useState('all')
 

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mockPreviousMeetings } from '../mockData'
-import { startMeeting } from '../api'
+import { startMeeting, getMeetings } from '../api'
 import { useDemoMode } from '../DemoContext'
+import { meetingToCard } from '../utils'
 import './Dashboard.css'
 
 function extractNativeId(url) {
@@ -124,7 +125,14 @@ export default function Dashboard() {
   const [dispatchError, setDispatchError] = useState('')
   const [filter, setFilter] = useState('all') // all | pending | reviewed
 
-  const meetings = demo ? mockPreviousMeetings : []
+  const [meetings, setMeetings] = useState(demo ? mockPreviousMeetings : [])
+
+  useEffect(() => {
+    if (demo) { setMeetings(mockPreviousMeetings); return }
+    getMeetings()
+      .then((data) => setMeetings((data.meetings ?? []).map(meetingToCard)))
+      .catch((e) => console.warn('[Dashboard] fetch failed:', e))
+  }, [demo])
 
   const handleDispatch = async () => {
     if (!url.trim() || dispatchState !== 'idle') return

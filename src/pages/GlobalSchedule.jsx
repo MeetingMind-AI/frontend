@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { mockAllKanbanTasks } from '../mockData'
+import { getMeetings } from '../api'
 import { useDemoMode } from '../DemoContext'
+import { buildScheduleItems } from '../utils'
 import './GlobalKanban.css'
 
 const MOCK_DATES = ['May 7, 2026', 'May 9, 2026', 'May 14, 2026', 'May 19, 2026']
@@ -94,6 +96,13 @@ export default function GlobalSchedule() {
   const [tasks, setTasks] = useState(
     demo ? mockAllKanbanTasks.filter((t) => t.type === 'schedule') : []
   )
+
+  useEffect(() => {
+    if (demo) return
+    getMeetings()
+      .then((data) => setTasks(buildScheduleItems(data.meetings ?? [])))
+      .catch(() => {})
+  }, [demo])
   const [filterMeeting, setFilterMeeting] = useState('all')
 
   const meetings = [...new Set(tasks.map((t) => t.meeting))]

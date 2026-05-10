@@ -3,17 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { mockPostMeetingTasks, mockMeetingSummary, mockTranscript } from '../mockData'
 import { getMeeting, getTranscript } from '../api'
 import { useDemoMode } from '../DemoContext'
+import { parseScrumMaster, formatMeetingTitle, formatDate } from '../utils'
 import './Review.css'
-
-// Ollama stores scrum_master output as a raw JSON string inside the JSONB field
-function parseScrumMaster(raw) {
-  if (!raw) return null
-  let data = raw
-  if (typeof data === 'string') {
-    try { data = JSON.parse(data) } catch { return null }
-  }
-  return typeof data === 'object' ? data : null
-}
 
 function buildTasksFromSummary(sm, meetingTitle) {
   if (!sm) return []
@@ -331,14 +322,12 @@ function Review() {
           </div>
           <div className="rv-meeting-info">
             <span className="rv-meeting-title">
-              {demo ? mockMeetingSummary.title : (meetingData?.title?.split(':').slice(1).join(':') || meetingData?.title || `Meeting #${parsedMeetingId}`)}
+              {demo ? mockMeetingSummary.title : (meetingData ? formatMeetingTitle(meetingData.title) : `Meeting #${parsedMeetingId}`)}
             </span>
             <span className="rv-meeting-meta">
               {demo
                 ? `${mockMeetingSummary.date} · ${mockMeetingSummary.duration}`
-                : meetingData?.created_at
-                  ? new Date(meetingData.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-                  : ''}
+                : meetingData ? `${formatDate(meetingData.created_at)} · ${meetingData.status}` : ''}
             </span>
           </div>
         </div>

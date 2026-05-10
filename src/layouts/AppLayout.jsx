@@ -1,6 +1,9 @@
+import { useState, useEffect } from 'react'
 import { NavLink, Link, Outlet } from 'react-router-dom'
 import { mockPreviousMeetings } from '../mockData'
+import { getMeetings } from '../api'
 import { useDemoMode } from '../DemoContext'
+import { meetingToCard } from '../utils'
 import './AppLayout.css'
 
 function speakerColor(name) {
@@ -16,7 +19,16 @@ function initials(name) {
 
 export default function AppLayout() {
   const { demo, toggle } = useDemoMode()
-  const unreviewed = demo ? mockPreviousMeetings.filter((m) => !m.reviewed).length : 0
+  const [recentMeetings, setRecentMeetings] = useState(demo ? mockPreviousMeetings : [])
+
+  useEffect(() => {
+    if (demo) { setRecentMeetings(mockPreviousMeetings); return }
+    getMeetings()
+      .then((data) => setRecentMeetings((data.meetings ?? []).map(meetingToCard)))
+      .catch(() => {})
+  }, [demo])
+
+  const unreviewed = recentMeetings.filter((m) => !m.reviewed).length
 
   return (
     <div className="app-layout">
@@ -82,7 +94,7 @@ export default function AppLayout() {
         {/* Recent meetings quick-list */}
         <div className="sidebar-recent">
           <p className="sidebar-nav-label">Recent Meetings</p>
-          {(demo ? mockPreviousMeetings.slice(0, 5) : []).map((m) => (
+          {recentMeetings.slice(0, 5).map((m) => (
             <Link to={`/review/${m.id}`} className="sidebar-recent-item" key={m.id}>
               <div className="sidebar-recent-avatars">
                 {m.participants.slice(0, 2).map((p) => (
