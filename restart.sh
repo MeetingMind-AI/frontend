@@ -4,13 +4,7 @@ set -e
 CONTAINER="meetingmind-frontend"
 BACKEND_URL="${BACKEND_URL:-http://172.17.0.1:8000}"
 
-echo "==> Pulling latest code..."
-git pull origin main
-
-echo "==> Building image..."
-docker build -t meetingmind-frontend .
-
-echo "==> Restarting container..."
+echo "==> Restarting $CONTAINER..."
 docker stop "$CONTAINER" 2>/dev/null || true
 docker rm   "$CONTAINER" 2>/dev/null || true
 
