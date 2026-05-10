@@ -10,7 +10,10 @@ export default function GlobalParkingLot() {
   const [items, setItems] = useState(demo ? mockAllParkingLotItems : [])
 
   useEffect(() => {
-    if (demo) return
+    if (demo) {
+      setItems(mockAllParkingLotItems)
+      return
+    }
     getMeetings()
       .then((data) => setItems(buildParkingLotItems(data.meetings ?? [])))
       .catch(() => {})

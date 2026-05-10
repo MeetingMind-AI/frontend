@@ -117,8 +117,17 @@ function Live() {
         const chunks = data.chunks ?? []
         setTranscriptLoading(false)
         if (chunks.length === 0) return
+        // Deduplicate by (speaker, text) — two code paths write to transcript_chunks
+        // (Vexa REST poll + WS ingest) and can produce duplicates until the next sync
+        const seen = new Set()
+        const deduped = chunks.filter((c) => {
+          const key = `${c.speaker}|||${c.text.trim()}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
         setTranscript(
-          chunks.map((c) => ({
+          deduped.map((c) => ({
             id: c.id,
             speaker: c.speaker,
             text: c.text,
