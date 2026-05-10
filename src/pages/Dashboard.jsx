@@ -129,6 +129,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (demo) { setMeetings(mockPreviousMeetings); return }
+    setMeetings([])
     getMeetings()
       .then((data) => setMeetings((data.meetings ?? []).map(meetingToCard)))
       .catch((e) => console.warn('[Dashboard] fetch failed:', e))

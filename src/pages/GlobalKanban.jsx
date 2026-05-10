@@ -58,6 +58,7 @@ export default function GlobalKanban() {
       setTasks(mockAllKanbanTasks.filter((t) => t.type === 'todo'))
       return
     }
+    setTasks([])
     getMeetings()
       .then((data) => setTasks(buildKanbanTasks(data.meetings ?? [])))
       .catch(() => {})

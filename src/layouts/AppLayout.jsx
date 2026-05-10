@@ -23,6 +23,7 @@ export default function AppLayout() {
 
   useEffect(() => {
     if (demo) { setRecentMeetings(mockPreviousMeetings); return }
+    setRecentMeetings([])
     getMeetings()
       .then((data) => setRecentMeetings((data.meetings ?? []).map(meetingToCard)))
       .catch(() => {})

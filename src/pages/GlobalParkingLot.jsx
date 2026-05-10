@@ -14,6 +14,7 @@ export default function GlobalParkingLot() {
       setItems(mockAllParkingLotItems)
       return
     }
+    setItems([])
     getMeetings()
       .then((data) => setItems(buildParkingLotItems(data.meetings ?? [])))
       .catch(() => {})

@@ -102,6 +102,7 @@ export default function GlobalSchedule() {
       setTasks(mockAllKanbanTasks.filter((t) => t.type === 'schedule'))
       return
     }
+    setTasks([])
     getMeetings()
       .then((data) => setTasks(buildScheduleItems(data.meetings ?? [])))
       .catch(() => {})
