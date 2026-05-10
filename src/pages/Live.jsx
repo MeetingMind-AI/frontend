@@ -63,14 +63,23 @@ function Live() {
   const [conflict, setConflict] = useState(false)
   const [autoMode, setAutoMode] = useState(false)
   const [clarityModal, setClarityModal] = useState(null)
-  const [elapsed, setElapsed] = useState(549) // start at ~9 min into meeting
+  const [elapsed, setElapsed] = useState(demo ? 549 : 0)
   const [liveInsights, setLiveInsights] = useState([])
   const [wsStatus, setWsStatus] = useState(parsedMeetingId ? 'connecting' : 'disconnected')
 
   const MAX_INSIGHTS = 50
 
+  const meetingTitle = demo
+    ? 'Sprint 14 Planning'
+    : parsedMeetingId ? `Meeting #${parsedMeetingId}` : 'Live Meeting'
+
+  const demoParticipants = ['Alice Chen', 'Bob Martinez', 'Carol Singh', 'David Kim']
+  const participants = demo
+    ? demoParticipants
+    : [...new Set(transcript.map((m) => m.speaker))]
+
   const transcriptEndRef = useRef(null)
-  const transcriptIdxRef = useRef(4)
+  const transcriptIdxRef = useRef(demo ? 4 : 0)
   const sentCountRef = useRef(0)
   const autoModeRef = useRef(false)
   const wsRef = useRef(null)
@@ -123,8 +132,9 @@ function Live() {
     return () => clearInterval(t)
   }, [demo])
 
-  // Conflict detection trigger
+  // Conflict detection trigger (demo only)
   useEffect(() => {
+    if (!demo) return
     const t = setTimeout(() => {
       if (!autoModeRef.current) {
         setConflict(true)
@@ -132,7 +142,7 @@ function Live() {
       }
     }, 11000)
     return () => clearTimeout(t)
-  }, [])
+  }, [demo])
 
   // Auto-scroll transcript
   useEffect(() => {
@@ -181,7 +191,7 @@ function Live() {
             </svg>
             MeetingMind
           </div>
-          <div className="live-meeting-title">Sprint 14 Planning</div>
+          <div className="live-meeting-title">{meetingTitle}</div>
         </div>
 
         <div className="live-header-center">
@@ -189,31 +199,35 @@ function Live() {
             <span className="live-live-dot" /> LIVE
           </span>
           <span className="live-timer">{formatTime(elapsed)}</span>
-          <div className="live-participants">
-            {['Alice Chen', 'Bob Martinez', 'Carol Singh', 'David Kim'].map((name) => (
-              <div
-                key={name}
-                className="live-avatar"
-                style={{ background: speakerColor(name) }}
-                title={name}
-              >
-                {speakerInitials(name)}
-              </div>
-            ))}
-          </div>
+          {participants.length > 0 && (
+            <div className="live-participants">
+              {participants.map((name) => (
+                <div
+                  key={name}
+                  className="live-avatar"
+                  style={{ background: speakerColor(name) }}
+                  title={name}
+                >
+                  {speakerInitials(name)}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="live-header-right">
-          <div className="live-auto-toggle">
-            <span className="live-auto-label">Auto Mode</span>
-            <button
-              className={`live-toggle ${autoMode ? 'live-toggle--on' : ''}`}
-              onClick={() => setAutoMode((v) => !v)}
-              title="Automatically accept parking lot suggestions"
-            >
-              <span className="live-toggle-knob" />
-            </button>
-          </div>
+          {demo && (
+            <div className="live-auto-toggle">
+              <span className="live-auto-label">Auto Mode</span>
+              <button
+                className={`live-toggle ${autoMode ? 'live-toggle--on' : ''}`}
+                onClick={() => setAutoMode((v) => !v)}
+                title="Automatically accept parking lot suggestions"
+              >
+                <span className="live-toggle-knob" />
+              </button>
+            </div>
+          )}
           <button className="live-end-btn" onClick={async () => {
             if (parsedMeetingId) {
               try { await leaveMeeting(parsedMeetingId) } catch {}
@@ -290,21 +304,25 @@ function Live() {
       {/* Panel D — Clarity Bar */}
       <div className="live-clarity-bar">
         <span className="live-clarity-label">Instant Clarity</span>
-        <button className="live-clarity-btn live-clarity-btn--tech" onClick={() => setClarityModal(CLARITY_CONTENT.technical)}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
-          </svg>
-          Explain — Technical
-        </button>
-        <button className="live-clarity-btn live-clarity-btn--biz" onClick={() => setClarityModal(CLARITY_CONTENT.business)}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
-          Explain — Business
-        </button>
+        {demo && (
+          <>
+            <button className="live-clarity-btn live-clarity-btn--tech" onClick={() => setClarityModal(CLARITY_CONTENT.technical)}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
+              </svg>
+              Explain — Technical
+            </button>
+            <button className="live-clarity-btn live-clarity-btn--biz" onClick={() => setClarityModal(CLARITY_CONTENT.business)}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              Explain — Business
+            </button>
+          </>
+        )}
         {parsedMeetingId && (
           <>
           <button
