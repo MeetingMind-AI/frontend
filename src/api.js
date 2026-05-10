@@ -3,15 +3,26 @@
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
 // FastAPI validation errors return detail as an array of objects.
-// Plain errors return detail as a string.
+// The backend sometimes double-encodes the detail as a JSON string —
+// unwrap it if so before extracting the human-readable message.
 function extractError(body, status) {
-  const { detail } = body
+  let detail = body.detail
   if (!detail) return `HTTP ${status}`
+
+  // Unwrap double-encoded JSON string: detail = '{"detail":[...]}'
+  if (typeof detail === 'string') {
+    try {
+      const inner = JSON.parse(detail)
+      detail = inner.detail ?? inner
+    } catch {}
+  }
+
   if (Array.isArray(detail)) {
     const msg = detail[0]?.msg ?? ''
     return msg.replace(/^value error,\s*/i, '')
   }
-  return String(detail)
+
+  return typeof detail === 'string' ? detail : `HTTP ${status}`
 }
 
 // Derive the WebSocket base from the current page origin so it also goes
@@ -28,13 +39,7 @@ export async function startMeeting(platform, nativeId) {
     body: JSON.stringify({ platform, native_id: nativeId }),
   })
   if (!res.ok) {
-    const text = await res.text()
-    console.log('[api] raw response text:', text)
-    let body
-    try { body = JSON.parse(text) } catch { body = {} }
-    console.log('[api] parsed body:', body)
-    console.log('[api] body.detail:', body.detail)
-    console.log('[api] Array.isArray:', Array.isArray(body.detail))
+    const body = await res.json().catch(() => ({}))
     throw new Error(extractError(body, res.status))
   }
   return res.json() // { meeting_id: number }

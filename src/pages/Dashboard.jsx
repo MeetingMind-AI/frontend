@@ -140,8 +140,6 @@ export default function Dashboard() {
       setDispatchState('done')
       setTimeout(() => navigate(`/live/${meeting_id}`), 800)
     } catch (err) {
-      console.error('[dispatch] err.message:', err.message)
-      console.error('[dispatch] err:', err)
       setDispatchState('idle')
       setDispatchError(err.message)
     }
