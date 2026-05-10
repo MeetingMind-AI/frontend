@@ -474,6 +474,156 @@
   font-size: 13px;
 }
 
+/* ── Card title row with rename ── */
+.dash-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.dash-rename-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+  margin-top: 2px;
+}
+
+.dash-card:hover .dash-rename-btn {
+  opacity: 1;
+}
+
+.dash-rename-btn:hover {
+  background: var(--bg-4);
+  color: var(--text-1);
+}
+
+.dash-rename-input {
+  flex: 1;
+  background: var(--bg-3);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-0);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  padding: 4px 8px;
+  box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.12);
+}
+
+/* ── Card footer delete ── */
+.dash-delete-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.dash-card:hover .dash-delete-btn {
+  opacity: 1;
+}
+
+.dash-delete-btn:hover {
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--red);
+  border-color: rgba(248, 81, 73, 0.2);
+}
+
+.dash-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.dash-delete-yes {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  transition: background 0.12s;
+}
+
+.dash-delete-yes:hover {
+  background: rgba(248, 81, 73, 0.2);
+}
+
+.dash-delete-no {
+  font-size: 12px;
+  color: var(--text-2);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.dash-delete-no:hover {
+  color: var(--text-1);
+}
+
+/* ── Meetings header with search ── */
+.dash-meetings-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dash-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  color: var(--text-3);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dash-search-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.1);
+  color: var(--text-2);
+}
+
+.dash-search-input {
+  background: transparent;
+  border: none;
+  color: var(--text-1);
+  font-size: 12px;
+  width: 160px;
+}
+
+.dash-search-input::placeholder {
+  color: var(--text-3);
+}
+
+.dash-search-clear {
+  display: flex;
+  align-items: center;
+  color: var(--text-3);
+}
+
+.dash-search-clear:hover {
+  color: var(--text-1);
+}
+
 @media (max-width: 900px) {
   .dash-stats-row {
     grid-template-columns: repeat(2, 1fr);

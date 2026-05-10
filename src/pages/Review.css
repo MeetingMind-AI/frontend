@@ -799,6 +799,41 @@
   to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
+/* ── Editable meeting title in header ── */
+.rv-meeting-title--editable {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  transition: background 0.12s;
+}
+
+.rv-meeting-title--editable:hover {
+  background: var(--bg-3);
+}
+
+.rv-title-input {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-0);
+  background: var(--bg-3);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 3px 8px;
+  box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.12);
+  min-width: 220px;
+}
+
+.rv-title-input:focus {
+  outline: none;
+}
+
+/* ── Copy button state ── */
+.rv-btn--copied {
+  color: var(--green) !important;
+  border-color: rgba(63, 185, 80, 0.3) !important;
+}
+
 @media (max-width: 800px) {
   .rv-kanban-board {
     grid-template-columns: 1fr;

@@ -87,6 +87,28 @@ export async function getTranscript(meetingId) {
   return res.json() // { meeting_id, status, chunks: [{id, speaker, text, timestamp}] }
 }
 
+export async function renameMeeting(meetingId, title) {
+  const res = await fetch(`${BASE}/api/meetings/${meetingId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(extractError(body, res.status))
+  }
+  return res.json()
+}
+
+export async function deleteMeeting(meetingId) {
+  const res = await fetch(`${BASE}/api/meetings/${meetingId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(extractError(body, res.status))
+  }
+  return res.json()
+}
+
 export function openInsightSocket(meetingId, { onInsight, onOpen, onClose } = {}) {
   const ws = new WebSocket(`${wsBase()}/api/ws/ingest/${meetingId}`)
 

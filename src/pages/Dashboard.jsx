@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mockPreviousMeetings } from '../mockData'
-import { startMeeting, getMeetings } from '../api'
+import { startMeeting, getMeetings, renameMeeting, deleteMeeting } from '../api'
 import { useDemoMode } from '../DemoContext'
 import { meetingToCard } from '../utils'
 import './Dashboard.css'
@@ -25,8 +25,32 @@ function initials(name) {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase()
 }
 
-function MeetingCard({ meeting }) {
+function MeetingCard({ meeting, onRename, onDelete }) {
   const navigate = useNavigate()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(meeting.title)
+  const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select()
+  }, [editing])
+
+  const startEdit = (e) => {
+    e.stopPropagation()
+    setDraft(meeting.title)
+    setEditing(true)
+  }
+
+  const saveEdit = async () => {
+    const trimmed = draft.trim()
+    if (!trimmed || trimmed === meeting.title) { setEditing(false); return }
+    setSaving(true)
+    try { await onRename(meeting.id, trimmed) } catch {}
+    setSaving(false)
+    setEditing(false)
+  }
 
   return (
     <div className={`dash-card ${!meeting.reviewed ? 'dash-card--pending' : ''}`}>
@@ -47,7 +71,33 @@ function MeetingCard({ meeting }) {
         <span className="dash-card-date">{meeting.date}</span>
       </div>
 
-      <h3 className="dash-card-title">{meeting.title}</h3>
+      <div className="dash-card-title-row">
+        {editing ? (
+          <input
+            ref={inputRef}
+            className="dash-rename-input"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveEdit()
+              if (e.key === 'Escape') setEditing(false)
+            }}
+            onBlur={saveEdit}
+            disabled={saving}
+          />
+        ) : (
+          <>
+            <h3 className="dash-card-title">{meeting.title}</h3>
+            <button className="dash-rename-btn" onClick={startEdit} title="Rename">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+          </>
+        )}
+      </div>
+
       <p className="dash-card-summary">{meeting.summary}</p>
 
       <div className="dash-card-meta-row">
@@ -102,6 +152,22 @@ function MeetingCard({ meeting }) {
       </div>
 
       <div className="dash-card-footer">
+        {confirmDelete ? (
+          <div className="dash-delete-confirm">
+            <span>Delete?</span>
+            <button className="dash-delete-yes" onClick={() => onDelete(meeting.id)}>Delete</button>
+            <button className="dash-delete-no" onClick={() => setConfirmDelete(false)}>Cancel</button>
+          </div>
+        ) : (
+          <button className="dash-delete-btn" onClick={() => setConfirmDelete(true)} title="Delete meeting">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14H6L5 6" />
+              <path d="M10 11v6M14 11v6" />
+              <path d="M9 6V4h6v2" />
+            </svg>
+          </button>
+        )}
         <button
           className={`dash-card-cta ${!meeting.reviewed ? 'dash-card-cta--pending' : ''}`}
           onClick={() => navigate(`/review/${meeting.id}`)}
@@ -121,9 +187,10 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { demo } = useDemoMode()
   const [url, setUrl] = useState('')
-  const [dispatchState, setDispatchState] = useState('idle') // idle | loading | done | error
+  const [dispatchState, setDispatchState] = useState('idle')
   const [dispatchError, setDispatchError] = useState('')
-  const [filter, setFilter] = useState('all') // all | pending | reviewed
+  const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
 
   const [meetings, setMeetings] = useState(demo ? mockPreviousMeetings : [])
 
@@ -154,11 +221,28 @@ export default function Dashboard() {
     }
   }
 
-  const filtered = meetings.filter((m) => {
-    if (filter === 'pending') return !m.reviewed
-    if (filter === 'reviewed') return m.reviewed
-    return true
-  })
+  const handleRename = async (id, newTitle) => {
+    if (demo) {
+      setMeetings((prev) => prev.map((m) => m.id === id ? { ...m, title: newTitle } : m))
+      return
+    }
+    await renameMeeting(id, newTitle)
+    setMeetings((prev) => prev.map((m) => m.id === id ? { ...m, title: newTitle } : m))
+  }
+
+  const handleDelete = async (id) => {
+    if (demo) { setMeetings((prev) => prev.filter((m) => m.id !== id)); return }
+    await deleteMeeting(id)
+    setMeetings((prev) => prev.filter((m) => m.id !== id))
+  }
+
+  const filtered = meetings
+    .filter((m) => {
+      if (filter === 'pending') return !m.reviewed
+      if (filter === 'reviewed') return m.reviewed
+      return true
+    })
+    .filter((m) => !search.trim() || m.title.toLowerCase().includes(search.toLowerCase()))
 
   const totalActionItems = meetings.reduce((s, m) => s + m.actionItemCount, 0)
   const totalParking = meetings.reduce((s, m) => s + m.parkingLotCount, 0)
@@ -166,7 +250,6 @@ export default function Dashboard() {
 
   return (
     <div className="dash-page">
-      {/* Page header */}
       <div className="dash-page-header">
         <div>
           <h1 className="dash-page-title">Dashboard</h1>
@@ -174,7 +257,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats row */}
       <div className="dash-stats-row">
         <div className="dash-stat-card">
           <div className="dash-stat-card-num">{meetings.length}</div>
@@ -194,7 +276,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Join box */}
       <div className="dash-join-box">
         <div className="dash-join-box-left">
           <div className="dash-join-box-title">
@@ -256,10 +337,31 @@ export default function Dashboard() {
         </p>
       )}
 
-      {/* Meetings section */}
       <div className="dash-meetings-section">
         <div className="dash-meetings-header">
-          <span className="dash-section-label">Past Meetings</span>
+          <div className="dash-meetings-header-left">
+            <span className="dash-section-label">Past Meetings</span>
+            <div className="dash-search-wrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                className="dash-search-input"
+                placeholder="Search meetings..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className="dash-search-clear" onClick={() => setSearch('')} title="Clear">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
           <div className="dash-filter-tabs">
             {[
               { key: 'all', label: `All (${meetings.length})` },
@@ -280,7 +382,7 @@ export default function Dashboard() {
         {filtered.length > 0 ? (
           <div className="dash-meetings-grid">
             {filtered.map((m) => (
-              <MeetingCard key={m.id} meeting={m} />
+              <MeetingCard key={m.id} meeting={m} onRename={handleRename} onDelete={handleDelete} />
             ))}
           </div>
         ) : (
@@ -288,7 +390,7 @@ export default function Dashboard() {
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <p>No meetings match this filter</p>
+            <p>{search ? 'No meetings match your search' : 'No meetings match this filter'}</p>
           </div>
         )}
       </div>

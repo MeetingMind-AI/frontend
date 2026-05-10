@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { mockPostMeetingTasks, mockMeetingSummary, mockTranscript } from '../mockData'
-import { getMeeting, getTranscript } from '../api'
+import { getMeeting, getTranscript, renameMeeting } from '../api'
 import { useDemoMode } from '../DemoContext'
 import { parseScrumMaster, formatMeetingTitle, formatDate } from '../utils'
 import './Review.css'
@@ -252,6 +252,9 @@ function Review() {
   const [meetingData, setMeetingData] = useState(null)
   const [chunks, setChunks] = useState([])
   const [loading, setLoading] = useState(!demo && !!parsedMeetingId)
+  const [titleEditing, setTitleEditing] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (demo || !parsedMeetingId) return
@@ -321,9 +324,44 @@ function Review() {
             MeetingMind
           </div>
           <div className="rv-meeting-info">
-            <span className="rv-meeting-title">
-              {demo ? mockMeetingSummary.title : (meetingData ? formatMeetingTitle(meetingData.title) : `Meeting #${parsedMeetingId}`)}
-            </span>
+            {!demo && meetingData && titleEditing ? (
+              <input
+                className="rv-title-input"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    const t = titleDraft.trim()
+                    if (t && t !== formatMeetingTitle(meetingData.title)) {
+                      try { await renameMeeting(meetingData.id, t); setMeetingData((prev) => ({ ...prev, title: t })) } catch {}
+                    }
+                    setTitleEditing(false)
+                  }
+                  if (e.key === 'Escape') setTitleEditing(false)
+                }}
+                onBlur={async () => {
+                  const t = titleDraft.trim()
+                  if (t && t !== formatMeetingTitle(meetingData.title)) {
+                    try { await renameMeeting(meetingData.id, t); setMeetingData((prev) => ({ ...prev, title: t })) } catch {}
+                  }
+                  setTitleEditing(false)
+                }}
+                autoFocus
+              />
+            ) : (
+              <span
+                className={`rv-meeting-title ${!demo && meetingData ? 'rv-meeting-title--editable' : ''}`}
+                onClick={() => {
+                  if (!demo && meetingData) {
+                    setTitleDraft(formatMeetingTitle(meetingData.title))
+                    setTitleEditing(true)
+                  }
+                }}
+                title={!demo && meetingData ? 'Click to rename' : undefined}
+              >
+                {demo ? mockMeetingSummary.title : (meetingData ? formatMeetingTitle(meetingData.title) : `Meeting #${parsedMeetingId}`)}
+              </span>
+            )}
             <span className="rv-meeting-meta">
               {demo
                 ? `${mockMeetingSummary.date} · ${mockMeetingSummary.duration}`
@@ -333,6 +371,38 @@ function Review() {
         </div>
         <div className="rv-header-right">
           <button className="rv-btn rv-btn--ghost" onClick={() => navigate('/')}>← Dashboard</button>
+          {!demo && (
+            <button
+              className={`rv-btn rv-btn--ghost ${copied ? 'rv-btn--copied' : ''}`}
+              onClick={() => {
+                const sm = parseScrumMaster(meetingData?.summary?.scrum_master)
+                if (!sm) return
+                const lines = []
+                if (sm.summary) lines.push(`Summary:\n${sm.summary}`)
+                if (sm.to_do?.length) lines.push(`\nAction Items:\n${sm.to_do.map((t, i) => `${i + 1}. ${typeof t === 'string' ? t : (t.task ?? '')}`).join('\n')}`)
+                if (sm.parking_lot?.length) lines.push(`\nParking Lot:\n${sm.parking_lot.map((t) => `- ${typeof t === 'string' ? t : (t.task ?? String(t))}`).join('\n')}`)
+                navigator.clipboard.writeText(lines.join('\n')).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+              }}
+              disabled={!meetingData?.summary?.scrum_master}
+            >
+              {copied ? (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Copied
+                </>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  Copy Summary
+                </>
+              )}
+            </button>
+          )}
           <button
             className={`rv-btn rv-btn--primary ${syncState === 'syncing' ? 'rv-btn--syncing' : ''} ${syncState === 'done' ? 'rv-btn--done' : ''}`}
             onClick={handleSync}
