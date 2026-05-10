@@ -1,5 +1,6 @@
 import { NavLink, Link, Outlet } from 'react-router-dom'
 import { mockPreviousMeetings } from '../mockData'
+import { useDemoMode } from '../DemoContext'
 import './AppLayout.css'
 
 function speakerColor(name) {
@@ -14,7 +15,8 @@ function initials(name) {
 }
 
 export default function AppLayout() {
-  const unreviewed = mockPreviousMeetings.filter((m) => !m.reviewed).length
+  const { demo, toggle } = useDemoMode()
+  const unreviewed = demo ? mockPreviousMeetings.filter((m) => !m.reviewed).length : 0
 
   return (
     <div className="app-layout">
@@ -80,7 +82,7 @@ export default function AppLayout() {
         {/* Recent meetings quick-list */}
         <div className="sidebar-recent">
           <p className="sidebar-nav-label">Recent Meetings</p>
-          {mockPreviousMeetings.slice(0, 5).map((m) => (
+          {(demo ? mockPreviousMeetings.slice(0, 5) : []).map((m) => (
             <Link to={`/review/${m.id}`} className="sidebar-recent-item" key={m.id}>
               <div className="sidebar-recent-avatars">
                 {m.participants.slice(0, 2).map((p) => (
@@ -103,6 +105,18 @@ export default function AppLayout() {
               </div>
             </Link>
           ))}
+        </div>
+        {/* Demo mode toggle */}
+        <div className="sidebar-demo">
+          <button
+            className={`sidebar-demo-btn ${demo ? 'sidebar-demo-btn--on' : ''}`}
+            onClick={toggle}
+            title={demo ? 'Demo mode on — click to use real data' : 'Demo mode off — click to load sample data'}
+          >
+            <span className={`sidebar-demo-dot ${demo ? 'sidebar-demo-dot--on' : ''}`} />
+            Demo Mode
+            <span className="sidebar-demo-state">{demo ? 'ON' : 'OFF'}</span>
+          </button>
         </div>
       </aside>
 

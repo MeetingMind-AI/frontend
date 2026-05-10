@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { mockAllParkingLotItems } from '../mockData'
+import { useDemoMode } from '../DemoContext'
 import './GlobalParkingLot.css'
 
 export default function GlobalParkingLot() {
-  const [items, setItems] = useState(mockAllParkingLotItems)
+  const { demo } = useDemoMode()
+  const [items, setItems] = useState(demo ? mockAllParkingLotItems : [])
   const [filter, setFilter] = useState('all') // all | open | resolved
 
   const toggleStatus = (id) => {

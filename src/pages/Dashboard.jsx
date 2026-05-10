@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mockPreviousMeetings } from '../mockData'
 import { startMeeting } from '../api'
+import { useDemoMode } from '../DemoContext'
 import './Dashboard.css'
 
 function extractNativeId(url) {
@@ -117,10 +118,13 @@ function MeetingCard({ meeting }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { demo } = useDemoMode()
   const [url, setUrl] = useState('')
   const [dispatchState, setDispatchState] = useState('idle') // idle | loading | done | error
   const [dispatchError, setDispatchError] = useState('')
   const [filter, setFilter] = useState('all') // all | pending | reviewed
+
+  const meetings = demo ? mockPreviousMeetings : []
 
   const handleDispatch = async () => {
     if (!url.trim() || dispatchState !== 'idle') return
@@ -141,15 +145,15 @@ export default function Dashboard() {
     }
   }
 
-  const filtered = mockPreviousMeetings.filter((m) => {
+  const filtered = meetings.filter((m) => {
     if (filter === 'pending') return !m.reviewed
     if (filter === 'reviewed') return m.reviewed
     return true
   })
 
-  const totalActionItems = mockPreviousMeetings.reduce((s, m) => s + m.actionItemCount, 0)
-  const totalParking = mockPreviousMeetings.reduce((s, m) => s + m.parkingLotCount, 0)
-  const pendingReview = mockPreviousMeetings.filter((m) => !m.reviewed).length
+  const totalActionItems = meetings.reduce((s, m) => s + m.actionItemCount, 0)
+  const totalParking = meetings.reduce((s, m) => s + m.parkingLotCount, 0)
+  const pendingReview = meetings.filter((m) => !m.reviewed).length
 
   return (
     <div className="dash-page">
@@ -164,7 +168,7 @@ export default function Dashboard() {
       {/* Stats row */}
       <div className="dash-stats-row">
         <div className="dash-stat-card">
-          <div className="dash-stat-card-num">{mockPreviousMeetings.length}</div>
+          <div className="dash-stat-card-num">{meetings.length}</div>
           <div className="dash-stat-card-label">Total meetings</div>
         </div>
         <div className="dash-stat-card dash-stat-card--warn">
@@ -249,7 +253,7 @@ export default function Dashboard() {
           <span className="dash-section-label">Past Meetings</span>
           <div className="dash-filter-tabs">
             {[
-              { key: 'all', label: `All (${mockPreviousMeetings.length})` },
+              { key: 'all', label: `All (${meetings.length})` },
               { key: 'pending', label: `Needs Review (${pendingReview})` },
               { key: 'reviewed', label: 'Reviewed' },
             ].map((f) => (

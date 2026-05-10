@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { mockAllKanbanTasks } from '../mockData'
+import { useDemoMode } from '../DemoContext'
 import './GlobalKanban.css'
 
 const COLS = [
@@ -45,7 +46,10 @@ function KanbanCard({ task, onMove }) {
 }
 
 export default function GlobalKanban() {
-  const [tasks, setTasks] = useState(mockAllKanbanTasks.filter((t) => t.type === 'todo'))
+  const { demo } = useDemoMode()
+  const [tasks, setTasks] = useState(
+    demo ? mockAllKanbanTasks.filter((t) => t.type === 'todo') : []
+  )
   const [dragOver, setDragOver] = useState(null)
   const [filterMeeting, setFilterMeeting] = useState('all')
 

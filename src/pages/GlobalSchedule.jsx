@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { mockAllKanbanTasks } from '../mockData'
+import { useDemoMode } from '../DemoContext'
 import './GlobalKanban.css'
 
 const MOCK_DATES = ['May 7, 2026', 'May 9, 2026', 'May 14, 2026', 'May 19, 2026']
@@ -89,7 +90,10 @@ function ScheduleRow({ item, onSchedule, onRemove }) {
 }
 
 export default function GlobalSchedule() {
-  const [tasks, setTasks] = useState(mockAllKanbanTasks.filter((t) => t.type === 'schedule'))
+  const { demo } = useDemoMode()
+  const [tasks, setTasks] = useState(
+    demo ? mockAllKanbanTasks.filter((t) => t.type === 'schedule') : []
+  )
   const [filterMeeting, setFilterMeeting] = useState('all')
 
   const meetings = [...new Set(tasks.map((t) => t.meeting))]

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { mockTranscript, mockPreviousParkingLot } from '../mockData'
 import { leaveMeeting, openInsightSocket } from '../api'
+import { useDemoMode } from '../DemoContext'
 import './Live.css'
 
 function playBeep() {
@@ -55,8 +56,9 @@ function Live() {
   const navigate = useNavigate()
   const { meetingId } = useParams()
   const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
+  const { demo } = useDemoMode()
 
-  const [transcript, setTranscript] = useState(mockTranscript.slice(0, 4))
+  const [transcript, setTranscript] = useState(demo ? mockTranscript.slice(0, 4) : [])
   const [bannerOpen, setBannerOpen] = useState(true)
   const [conflict, setConflict] = useState(false)
   const [autoMode, setAutoMode] = useState(false)
@@ -109,8 +111,9 @@ function Live() {
     return () => clearInterval(t)
   }, [])
 
-  // Simulate live transcript additions
+  // Simulate live transcript additions (demo mode only)
   useEffect(() => {
+    if (!demo) return
     const t = setInterval(() => {
       if (transcriptIdxRef.current < mockTranscript.length) {
         setTranscript((prev) => [...prev, mockTranscript[transcriptIdxRef.current]])
@@ -118,7 +121,7 @@ function Live() {
       }
     }, 3500)
     return () => clearInterval(t)
-  }, [])
+  }, [demo])
 
   // Conflict detection trigger
   useEffect(() => {
@@ -222,8 +225,8 @@ function Live() {
         </div>
       </header>
 
-      {/* ── Previous Parking Lot Banner ── */}
-      {bannerOpen && (
+      {/* ── Previous Parking Lot Banner (demo only) ── */}
+      {demo && bannerOpen && (
         <div className="live-banner">
           <div className="live-banner-top">
             <div className="live-banner-title">
