@@ -2,6 +2,18 @@
 // VITE_API_URL is kept as an escape hatch for local dev without Docker.
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
+// FastAPI validation errors return detail as an array of objects.
+// Plain errors return detail as a string.
+function extractError(body, status) {
+  const { detail } = body
+  if (!detail) return `HTTP ${status}`
+  if (Array.isArray(detail)) {
+    const msg = detail[0]?.msg ?? ''
+    return msg.replace(/^value error,\s*/i, '')
+  }
+  return String(detail)
+}
+
 // Derive the WebSocket base from the current page origin so it also goes
 // through Nginx (same host, same port, no CORS).
 function wsBase() {
@@ -17,7 +29,7 @@ export async function startMeeting(platform, nativeId) {
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail ?? `HTTP ${res.status}`)
+    throw new Error(extractError(body, res.status))
   }
   return res.json() // { meeting_id: number }
 }
@@ -28,7 +40,7 @@ export async function leaveMeeting(meetingId) {
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail ?? `HTTP ${res.status}`)
+    throw new Error(extractError(body, res.status))
   }
   return res.json()
 }
