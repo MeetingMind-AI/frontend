@@ -138,7 +138,7 @@ export default function Dashboard() {
     try {
       const { meeting_id } = await startMeeting('google_meet', nativeId)
       setDispatchState('done')
-      setTimeout(() => navigate(`/live/${meeting_id}`), 800)
+      setTimeout(() => navigate(`/live/${meeting_id}?native=${encodeURIComponent(nativeId)}`), 800)
     } catch (err) {
       setDispatchState('idle')
       setDispatchError(err.message)

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { mockTranscript, mockPreviousParkingLot } from '../mockData'
-import { leaveMeeting, openInsightSocket } from '../api'
+import { leaveMeeting, openInsightSocket, getTranscript } from '../api'
 import { useDemoMode } from '../DemoContext'
 import './Live.css'
 
@@ -55,7 +55,9 @@ const CLARITY_CONTENT = {
 function Live() {
   const navigate = useNavigate()
   const { meetingId } = useParams()
+  const [searchParams] = useSearchParams()
   const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
+  const nativeId = searchParams.get('native')
   const { demo } = useDemoMode()
 
   const [transcript, setTranscript] = useState(demo ? mockTranscript.slice(0, 4) : [])
@@ -103,6 +105,34 @@ function Live() {
     wsRef.current = ws
     return () => { ws.close(); wsRef.current = null }
   }, [parsedMeetingId])
+
+  // Poll real transcript from backend every 10s (real mode only)
+  useEffect(() => {
+    if (demo || !parsedMeetingId) return
+
+    const poll = async () => {
+      try {
+        const data = await getTranscript(parsedMeetingId)
+        const chunks = data.chunks ?? []
+        if (chunks.length === 0) return
+        setTranscript(
+          chunks.map((c) => ({
+            id: c.id,
+            speaker: c.speaker,
+            text: c.text,
+            timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            role: '',
+          }))
+        )
+      } catch (e) {
+        console.warn('[Live] transcript poll failed:', e)
+      }
+    }
+
+    poll()
+    const t = setInterval(poll, 10000)
+    return () => clearInterval(t)
+  }, [demo, parsedMeetingId])
 
   // Send new transcript entries to backend as they arrive
   useEffect(() => {
