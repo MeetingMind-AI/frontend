@@ -1,7 +1,30 @@
-import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { mockPostMeetingTasks, mockMeetingSummary, mockTranscript } from '../mockData'
+import { getMeeting, getTranscript } from '../api'
+import { useDemoMode } from '../DemoContext'
 import './Review.css'
+
+// Ollama stores scrum_master output as a raw JSON string inside the JSONB field
+function parseScrumMaster(raw) {
+  if (!raw) return null
+  let data = raw
+  if (typeof data === 'string') {
+    try { data = JSON.parse(data) } catch { return null }
+  }
+  return typeof data === 'object' ? data : null
+}
+
+function buildTasksFromSummary(sm, meetingTitle) {
+  if (!sm) return []
+  const items = []
+  let id = 1
+  const label = (t) => typeof t === 'string' ? t : `${t.task ?? ''}${t.owner ? ` (${t.owner})` : ''}`
+  ;(sm.to_do ?? []).forEach((t) => items.push({ id: id++, title: label(t), type: 'todo', status: 'suggested', meeting: meetingTitle }))
+  ;(sm.pending_to_schedule ?? []).forEach((t) => items.push({ id: id++, title: label(t), type: 'schedule', status: 'suggested', meeting: meetingTitle }))
+  ;(sm.parking_lot ?? []).forEach((t) => items.push({ id: id++, title: typeof t === 'string' ? t : (t.task ?? String(t)), type: 'parking', status: 'suggested', meeting: meetingTitle }))
+  return items
+}
 
 function speakerColor(name) {
   const colors = ['#4f8ef7', '#3fb950', '#bc8cff', '#d29922', '#e3884c', '#f85149']
@@ -228,9 +251,31 @@ function ScheduleItem({ task, onConfirm, onReject, onEdit }) {
 /* ── Main Review page ── */
 function Review() {
   const navigate = useNavigate()
-  const [tasks, setTasks] = useState(mockPostMeetingTasks)
+  const { meetingId } = useParams()
+  const { demo } = useDemoMode()
+  const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
+
+  const [tasks, setTasks] = useState(demo ? mockPostMeetingTasks : [])
   const [activeTab, setActiveTab] = useState('tasks') // 'tasks' | 'schedule' | 'parking'
   const [syncState, setSyncState] = useState('idle')
+  const [meetingData, setMeetingData] = useState(null)
+  const [chunks, setChunks] = useState([])
+  const [loading, setLoading] = useState(!demo && !!parsedMeetingId)
+
+  useEffect(() => {
+    if (demo || !parsedMeetingId) return
+    setLoading(true)
+    Promise.all([getMeeting(parsedMeetingId), getTranscript(parsedMeetingId)])
+      .then(([meeting, transcript]) => {
+        setMeetingData(meeting)
+        setChunks(transcript.chunks ?? [])
+        const sm = parseScrumMaster(meeting.summary?.scrum_master)
+        const built = buildTasksFromSummary(sm, meeting.title)
+        if (built.length > 0) setTasks(built)
+      })
+      .catch((e) => console.warn('[Review] fetch failed:', e))
+      .finally(() => setLoading(false))
+  }, [demo, parsedMeetingId])
 
   // Separate by type
   const taskItems     = tasks.filter((t) => t.type === 'todo')
@@ -285,8 +330,16 @@ function Review() {
             MeetingMind
           </div>
           <div className="rv-meeting-info">
-            <span className="rv-meeting-title">{mockMeetingSummary.title}</span>
-            <span className="rv-meeting-meta">{mockMeetingSummary.date} · {mockMeetingSummary.duration}</span>
+            <span className="rv-meeting-title">
+              {demo ? mockMeetingSummary.title : (meetingData?.title?.split(':').slice(1).join(':') || meetingData?.title || `Meeting #${parsedMeetingId}`)}
+            </span>
+            <span className="rv-meeting-meta">
+              {demo
+                ? `${mockMeetingSummary.date} · ${mockMeetingSummary.duration}`
+                : meetingData?.created_at
+                  ? new Date(meetingData.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+                  : ''}
+            </span>
           </div>
         </div>
         <div className="rv-header-right">
@@ -324,75 +377,159 @@ function Review() {
           <div className="rv-summary-header">
             <div className="rv-summary-title-row">
               <span className="rv-section-label">AI Meeting Summary</span>
-              <div className="rv-participants">
-                {mockMeetingSummary.participants.map((p, i) => (
-                  <span key={i} className="rv-participant-chip">{p}</span>
-                ))}
+              {demo && (
+                <div className="rv-participants">
+                  {mockMeetingSummary.participants.map((p, i) => (
+                    <span key={i} className="rv-participant-chip">{p}</span>
+                  ))}
+                </div>
+              )}
+              {!demo && chunks.length > 0 && (
+                <div className="rv-participants">
+                  {[...new Set(chunks.map((c) => c.speaker))].map((p, i) => (
+                    <span key={i} className="rv-participant-chip">{p}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          {loading && (
+            <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
+              Loading summary...
+            </div>
+          )}
+          {!loading && demo && (
+            <div className="rv-summary-grid">
+              <div className="rv-summary-block">
+                <h4 className="rv-summary-block-title">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 11 12 14 22 4" />
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                  </svg>
+                  Key Decisions
+                </h4>
+                <ul className="rv-summary-list">
+                  {mockMeetingSummary.keyDecisions.map((d, i) => <li key={i}>{d}</li>)}
+                </ul>
+              </div>
+              <div className="rv-summary-block">
+                <h4 className="rv-summary-block-title">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  Unresolved
+                </h4>
+                <ul className="rv-summary-list rv-summary-list--warn">
+                  {mockMeetingSummary.unresolvedItems.map((d, i) => <li key={i}>{d}</li>)}
+                </ul>
+              </div>
+              <div className="rv-summary-block rv-summary-block--full">
+                <h4 className="rv-summary-block-title">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                  Next Steps
+                </h4>
+                <p className="rv-summary-text">{mockMeetingSummary.nextSteps}</p>
               </div>
             </div>
-          </div>
-          <div className="rv-summary-grid">
-            <div className="rv-summary-block">
-              <h4 className="rv-summary-block-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="9 11 12 14 22 4" />
-                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                </svg>
-                Key Decisions
-              </h4>
-              <ul className="rv-summary-list">
-                {mockMeetingSummary.keyDecisions.map((d, i) => <li key={i}>{d}</li>)}
-              </ul>
-            </div>
-            <div className="rv-summary-block">
-              <h4 className="rv-summary-block-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                Unresolved
-              </h4>
-              <ul className="rv-summary-list rv-summary-list--warn">
-                {mockMeetingSummary.unresolvedItems.map((d, i) => <li key={i}>{d}</li>)}
-              </ul>
-            </div>
-            <div className="rv-summary-block rv-summary-block--full">
-              <h4 className="rv-summary-block-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-                Next Steps
-              </h4>
-              <p className="rv-summary-text">{mockMeetingSummary.nextSteps}</p>
-            </div>
-          </div>
+          )}
+          {!loading && !demo && (() => {
+            const sm = parseScrumMaster(meetingData?.summary?.scrum_master)
+            if (!sm) return (
+              <div style={{ padding: '24px', color: 'var(--text-3)', fontSize: '13px' }}>
+                {meetingData?.status === 'completed'
+                  ? 'Summary generation failed or is unavailable.'
+                  : 'Summary will be generated when the meeting ends.'}
+              </div>
+            )
+            return (
+              <div className="rv-summary-grid">
+                <div className="rv-summary-block rv-summary-block--full">
+                  <h4 className="rv-summary-block-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="9 11 12 14 22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                    Summary
+                  </h4>
+                  <p className="rv-summary-text">{sm.summary}</p>
+                </div>
+                {sm.to_do?.length > 0 && (
+                  <div className="rv-summary-block">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                      </svg>
+                      Action Items
+                    </h4>
+                    <ul className="rv-summary-list">
+                      {sm.to_do.map((t, i) => <li key={i}>{typeof t === 'string' ? t : `${t.task}${t.owner ? ` — ${t.owner}` : ''}`}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {sm.parking_lot?.length > 0 && (
+                  <div className="rv-summary-block">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+                      </svg>
+                      Parking Lot
+                    </h4>
+                    <ul className="rv-summary-list rv-summary-list--warn">
+                      {sm.parking_lot.map((t, i) => <li key={i}>{typeof t === 'string' ? t : (t.task ?? String(t))}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         {/* Transcript */}
         <div className="rv-transcript">
-          <div className="rv-transcript-header">
-            <span className="rv-section-label">Full Transcript</span>
-            <span className="rv-transcript-count">{mockTranscript.length} messages</span>
-          </div>
-          <div className="rv-transcript-feed">
-            {mockTranscript.map((msg) => (
-              <div className="rv-msg" key={msg.id}>
-                <div className="rv-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
-                  {speakerInitials(msg.speaker)}
+          {(() => {
+            const feed = demo ? mockTranscript : chunks.map((c) => ({
+              id: c.id,
+              speaker: c.speaker,
+              role: '',
+              text: c.text,
+              timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            }))
+            return (
+              <>
+                <div className="rv-transcript-header">
+                  <span className="rv-section-label">Full Transcript</span>
+                  <span className="rv-transcript-count">{feed.length} messages</span>
                 </div>
-                <div className="rv-msg-body">
-                  <div className="rv-msg-meta">
-                    <span className="rv-msg-speaker">{msg.speaker}</span>
-                    <span className="rv-msg-role">{msg.role}</span>
-                    <span className="rv-msg-time">{msg.timestamp}</span>
-                  </div>
-                  <div className="rv-msg-text">{msg.text}</div>
+                <div className="rv-transcript-feed">
+                  {feed.length === 0 && (
+                    <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
+                      {loading ? 'Loading transcript...' : 'No transcript available.'}
+                    </div>
+                  )}
+                  {feed.map((msg) => (
+                    <div className="rv-msg" key={msg.id}>
+                      <div className="rv-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
+                        {speakerInitials(msg.speaker)}
+                      </div>
+                      <div className="rv-msg-body">
+                        <div className="rv-msg-meta">
+                          <span className="rv-msg-speaker">{msg.speaker}</span>
+                          {msg.role && <span className="rv-msg-role">{msg.role}</span>}
+                          <span className="rv-msg-time">{msg.timestamp}</span>
+                        </div>
+                        <div className="rv-msg-text">{msg.text}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
+              </>
+            )
+          })()}
         </div>
 
         {/* Action items section with tabs */}

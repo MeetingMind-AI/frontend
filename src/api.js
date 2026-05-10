@@ -60,6 +60,15 @@ export async function leaveMeeting(meetingId) {
 // Send transcript chunks with .send(speaker, text).
 // Calls onInsight({ role, text }) for each non-IGNORE Ollama summary received.
 // Returns { send, close }.
+export async function getMeeting(meetingId) {
+  const res = await fetch(`${BASE}/api/meetings/${meetingId}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(extractError(body, res.status))
+  }
+  return res.json() // { id, title, status, summary, created_at }
+}
+
 export async function getTranscript(meetingId) {
   const res = await fetch(`${BASE}/api/meetings/${meetingId}/transcript`)
   if (!res.ok) {
