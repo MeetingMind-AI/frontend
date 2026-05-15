@@ -104,6 +104,28 @@ export async function explainMeeting(meetingId, mode, lastXMinutes = null) {
   return res.json()
 }
 
+export async function getActions(meetingId) {
+  const res = await fetch(`${BASE}/api/meetings/${meetingId}/actions`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(extractError(body, res.status))
+  }
+  return res.json() // { pending: [...], accepted: [...], rejected: [...] }
+}
+
+export async function updateAction(meetingId, actionId, status) {
+  const res = await fetch(`${BASE}/api/meetings/${meetingId}/actions/${actionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(extractError(body, res.status))
+  }
+  return res.json() // { ok: true, id, status } or { ok: true, deleted }
+}
+
 export async function renameMeeting(meetingId, title) {
   const res = await fetch(`${BASE}/api/meetings/${meetingId}`, {
     method: 'PATCH',
@@ -126,7 +148,7 @@ export async function deleteMeeting(meetingId) {
   return res.json()
 }
 
-export function openInsightSocket(meetingId, { onInsight, onOpen, onClose } = {}) {
+export function openInsightSocket(meetingId, { onInsight, onProposal, onOpen, onClose } = {}) {
   const ws = new WebSocket(`${wsBase()}/api/ws/ingest/${meetingId}`)
 
   ws.onopen = () => onOpen?.()
@@ -136,14 +158,17 @@ export function openInsightSocket(meetingId, { onInsight, onOpen, onClose } = {}
     try {
       const msg = JSON.parse(data)
       const summary = msg.summary
-      if (!summary) return
-      // controller.summarize() returns dict[role -> text]
-      if (typeof summary === 'object') {
-        for (const [role, text] of Object.entries(summary)) {
-          if (text && text.toUpperCase() !== 'IGNORE') onInsight?.({ role, text })
+      if (summary) {
+        if (typeof summary === 'object') {
+          for (const [role, text] of Object.entries(summary)) {
+            if (text && text.toUpperCase() !== 'IGNORE') onInsight?.({ role, text })
+          }
+        } else if (typeof summary === 'string' && summary.toUpperCase() !== 'IGNORE') {
+          onInsight?.({ role: 'insight', text: summary })
         }
-      } else if (typeof summary === 'string' && summary.toUpperCase() !== 'IGNORE') {
-        onInsight?.({ role: 'insight', text: summary })
+      }
+      if (msg.proposal) {
+        onProposal?.(msg.proposal)
       }
     } catch (e) {
       console.warn('[WS] failed to parse message', e)

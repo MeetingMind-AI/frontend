@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { mockPostMeetingTasks, mockMeetingSummary, mockTranscript } from '../mockData'
-import { getMeeting, getTranscript, renameMeeting } from '../api'
-import { useDemoMode } from '../DemoContext'
+import { getMeeting, getTranscript, getActions, renameMeeting } from '../api'
 import { parseScrumMaster, formatMeetingTitle, formatDate } from '../utils'
 import './Review.css'
 
@@ -34,11 +32,9 @@ const TYPE_META = {
   parking: { label: 'PARKING',  color: 'var(--yellow)',  bg: 'var(--yellow-dim)'  },
 }
 
-/* ── Suggestion card — Edit / Approve / Reject ── */
 function SuggestionCard({ task, onApprove, onReject, onEdit }) {
   const [editMode, setEditMode] = useState(false)
   const [draft, setDraft] = useState(task.title)
-  const textareaRef = useRef(null)
 
   const startEdit = () => {
     setDraft(task.title)
@@ -66,7 +62,6 @@ function SuggestionCard({ task, onApprove, onReject, onEdit }) {
 
       {editMode ? (
         <textarea
-          ref={textareaRef}
           className="rv-card-textarea"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -115,7 +110,6 @@ function SuggestionCard({ task, onApprove, onReject, onEdit }) {
   )
 }
 
-/* ── Approved task card ── */
 function ApprovedCard({ task, onUndo }) {
   return (
     <div className="rv-card rv-card--approved">
@@ -140,150 +134,43 @@ function ApprovedCard({ task, onUndo }) {
   )
 }
 
-/* ── Schedule list item — Confirm / Edit / Reject ── */
-function ScheduleItem({ task, onConfirm, onReject, onEdit }) {
-  const [editMode, setEditMode] = useState(false)
-  const [draft, setDraft] = useState(task.title)
-
-  const saveEdit = () => {
-    const trimmed = draft.trim()
-    if (trimmed) onEdit(task.id, trimmed)
-    setEditMode(false)
-  }
-
-  const cancelEdit = () => {
-    setDraft(task.title)
-    setEditMode(false)
-  }
-
-  const isConfirmed = task.status === 'approved'
-
-  return (
-    <div className={`rv-schedule-item ${isConfirmed ? 'rv-schedule-item--confirmed' : ''}`}>
-      <div className="rv-schedule-item-left">
-        <div className={`rv-schedule-dot ${isConfirmed ? 'rv-schedule-dot--confirmed' : ''}`}>
-          {isConfirmed ? (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          ) : (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-          )}
-        </div>
-      </div>
-
-      <div className="rv-schedule-item-body">
-        {editMode ? (
-          <textarea
-            className="rv-card-textarea"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() }
-              if (e.key === 'Escape') cancelEdit()
-            }}
-            autoFocus
-            rows={2}
-          />
-        ) : (
-          <p className="rv-schedule-item-title">{task.title}</p>
-        )}
-        <span className="rv-schedule-item-status">
-          {isConfirmed ? 'Confirmed — will appear in To Schedule' : 'Pending review'}
-        </span>
-      </div>
-
-      <div className="rv-schedule-item-actions">
-        {editMode ? (
-          <>
-            <button className="rv-card-btn rv-card-btn--cancel" onClick={cancelEdit}>Cancel</button>
-            <button className="rv-card-btn rv-card-btn--save" onClick={saveEdit}>Save</button>
-          </>
-        ) : isConfirmed ? (
-          <button className="rv-card-btn rv-card-btn--undo" onClick={() => onReject(task.id)}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            Move back
-          </button>
-        ) : (
-          <>
-            <button className="rv-card-btn rv-card-btn--edit" onClick={() => { setDraft(task.title); setEditMode(true) }} title="Edit">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              Edit
-            </button>
-            <button className="rv-card-btn rv-card-btn--approve" onClick={() => onConfirm(task.id)}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Confirm
-            </button>
-            <button className="rv-card-btn rv-card-btn--reject" onClick={() => onReject(task.id)} title="Remove">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ── Main Review page ── */
 function Review() {
   const navigate = useNavigate()
   const { meetingId } = useParams()
-  const { demo } = useDemoMode()
   const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
 
-  const [tasks, setTasks] = useState(demo ? mockPostMeetingTasks : [])
-  const [activeTab, setActiveTab] = useState('tasks') // 'tasks' | 'schedule' | 'parking'
-  const [syncState, setSyncState] = useState('idle')
+  const [tasks, setTasks] = useState([])
+  const [activeTab, setActiveTab] = useState('tasks')
   const [meetingData, setMeetingData] = useState(null)
   const [chunks, setChunks] = useState([])
-  const [loading, setLoading] = useState(!demo && !!parsedMeetingId)
+  const [loading, setLoading] = useState(!!parsedMeetingId)
   const [titleEditing, setTitleEditing] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [copied, setCopied] = useState(false)
+  const [proposals, setProposals] = useState({ pending: [], accepted: [], rejected: [] })
 
   useEffect(() => {
-    if (demo || !parsedMeetingId) return
+    if (!parsedMeetingId) return
     setLoading(true)
-    Promise.all([getMeeting(parsedMeetingId), getTranscript(parsedMeetingId)])
-      .then(([meeting, transcript]) => {
+    Promise.all([getMeeting(parsedMeetingId), getTranscript(parsedMeetingId), getActions(parsedMeetingId)])
+      .then(([meeting, transcript, actions]) => {
         setMeetingData(meeting)
         setChunks(transcript.chunks ?? [])
+        setProposals(actions)
         const sm = parseScrumMaster(meeting.summary?.scrum_master)
         const built = buildTasksFromSummary(sm, meeting.title)
         if (built.length > 0) setTasks(built)
       })
       .catch((e) => console.warn('[Review] fetch failed:', e))
       .finally(() => setLoading(false))
-  }, [demo, parsedMeetingId])
+  }, [parsedMeetingId])
 
-  // Separate by type
   const taskItems     = tasks.filter((t) => t.type === 'todo')
   const scheduleItems = tasks.filter((t) => t.type === 'schedule')
   const parkingItems  = tasks.filter((t) => t.type === 'parking')
 
-  const suggestedTasks    = taskItems.filter((t) => t.status === 'suggested')
-  const approvedTasks     = taskItems.filter((t) => t.status === 'approved')
-  const pendingSchedule   = scheduleItems.filter((t) => t.status === 'suggested')
-  const confirmedSchedule = scheduleItems.filter((t) => t.status === 'approved')
-  const suggestedParking  = parkingItems.filter((t) => t.status === 'suggested')
-  const approvedParking   = parkingItems.filter((t) => t.status === 'approved')
-
-  const allApproved = tasks.filter((t) => t.status === 'approved')
+  const suggestedTasks  = taskItems.filter((t) => t.status === 'suggested')
+  const approvedTasks   = taskItems.filter((t) => t.status === 'approved')
 
   const updateTask = (id, patch) =>
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
@@ -293,27 +180,8 @@ function Review() {
   const undoTask    = (id) => updateTask(id, { status: 'suggested' })
   const editTask    = (id, title) => updateTask(id, { title })
 
-  const handleDragStart = (e, id) => {
-    e.dataTransfer.setData('taskId', String(id))
-    e.dataTransfer.effectAllowed = 'move'
-  }
-  const [dragOverCol, setDragOverCol] = useState(null)
-  const handleDrop = (e, status) => {
-    e.preventDefault()
-    const id = Number(e.dataTransfer.getData('taskId'))
-    if (id) updateTask(id, { status })
-    setDragOverCol(null)
-  }
-
-  const handleSync = () => {
-    if (allApproved.length === 0) return
-    setSyncState('syncing')
-    setTimeout(() => { setSyncState('done'); setTimeout(() => setSyncState('idle'), 3000) }, 1500)
-  }
-
   return (
     <div className="rv-page">
-      {/* Header */}
       <header className="rv-header">
         <div className="rv-header-left">
           <div className="rv-logo">
@@ -324,7 +192,7 @@ function Review() {
             MeetingMind
           </div>
           <div className="rv-meeting-info">
-            {!demo && meetingData && titleEditing ? (
+            {meetingData && titleEditing ? (
               <input
                 className="rv-title-input"
                 value={titleDraft}
@@ -350,28 +218,26 @@ function Review() {
               />
             ) : (
               <span
-                className={`rv-meeting-title ${!demo && meetingData ? 'rv-meeting-title--editable' : ''}`}
+                className={`rv-meeting-title ${meetingData ? 'rv-meeting-title--editable' : ''}`}
                 onClick={() => {
-                  if (!demo && meetingData) {
+                  if (meetingData) {
                     setTitleDraft(formatMeetingTitle(meetingData.title))
                     setTitleEditing(true)
                   }
                 }}
-                title={!demo && meetingData ? 'Click to rename' : undefined}
+                title={meetingData ? 'Click to rename' : undefined}
               >
-                {demo ? mockMeetingSummary.title : (meetingData ? formatMeetingTitle(meetingData.title) : `Meeting #${parsedMeetingId}`)}
+                {meetingData ? formatMeetingTitle(meetingData.title) : `Meeting #${parsedMeetingId}`}
               </span>
             )}
             <span className="rv-meeting-meta">
-              {demo
-                ? `${mockMeetingSummary.date} · ${mockMeetingSummary.duration}`
-                : meetingData ? `${formatDate(meetingData.created_at)} · ${meetingData.status}` : ''}
+              {meetingData ? `${formatDate(meetingData.created_at)} · ${meetingData.status}` : ''}
             </span>
           </div>
         </div>
         <div className="rv-header-right">
           <button className="rv-btn rv-btn--ghost" onClick={() => navigate('/')}>← Dashboard</button>
-          {!demo && (
+          {meetingData && (
             <button
               className={`rv-btn rv-btn--ghost ${copied ? 'rv-btn--copied' : ''}`}
               onClick={() => {
@@ -403,47 +269,15 @@ function Review() {
               )}
             </button>
           )}
-          <button
-            className={`rv-btn rv-btn--primary ${syncState === 'syncing' ? 'rv-btn--syncing' : ''} ${syncState === 'done' ? 'rv-btn--done' : ''}`}
-            onClick={handleSync}
-            disabled={syncState !== 'idle' || allApproved.length === 0}
-          >
-            {syncState === 'idle' && (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" />
-                  <polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" />
-                </svg>
-                Sync to External System (API)
-              </>
-            )}
-            {syncState === 'syncing' && <><span className="rv-spinner" />Syncing…</>}
-            {syncState === 'done' && (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Synced {allApproved.length} items
-              </>
-            )}
-          </button>
         </div>
       </header>
 
       <div className="rv-content">
-        {/* Summary */}
         <div className="rv-summary">
           <div className="rv-summary-header">
             <div className="rv-summary-title-row">
               <span className="rv-section-label">AI Meeting Summary</span>
-              {demo && (
-                <div className="rv-participants">
-                  {mockMeetingSummary.participants.map((p, i) => (
-                    <span key={i} className="rv-participant-chip">{p}</span>
-                  ))}
-                </div>
-              )}
-              {!demo && chunks.length > 0 && (
+              {chunks.length > 0 && (
                 <div className="rv-participants">
                   {[...new Set(chunks.map((c) => c.speaker))].map((p, i) => (
                     <span key={i} className="rv-participant-chip">{p}</span>
@@ -457,46 +291,7 @@ function Review() {
               Loading summary...
             </div>
           )}
-          {!loading && demo && (
-            <div className="rv-summary-grid">
-              <div className="rv-summary-block">
-                <h4 className="rv-summary-block-title">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="9 11 12 14 22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                  </svg>
-                  Key Decisions
-                </h4>
-                <ul className="rv-summary-list">
-                  {mockMeetingSummary.keyDecisions.map((d, i) => <li key={i}>{d}</li>)}
-                </ul>
-              </div>
-              <div className="rv-summary-block">
-                <h4 className="rv-summary-block-title">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                  Unresolved
-                </h4>
-                <ul className="rv-summary-list rv-summary-list--warn">
-                  {mockMeetingSummary.unresolvedItems.map((d, i) => <li key={i}>{d}</li>)}
-                </ul>
-              </div>
-              <div className="rv-summary-block rv-summary-block--full">
-                <h4 className="rv-summary-block-title">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                  Next Steps
-                </h4>
-                <p className="rv-summary-text">{mockMeetingSummary.nextSteps}</p>
-              </div>
-            </div>
-          )}
-          {!loading && !demo && (() => {
+          {!loading && (() => {
             const sm = parseScrumMaster(meetingData?.summary?.scrum_master)
             if (!sm) return (
               <div style={{ padding: '24px', color: 'var(--text-3)', fontSize: '13px' }}>
@@ -543,15 +338,27 @@ function Review() {
                     </ul>
                   </div>
                 )}
+                {proposals.accepted.length > 0 && (
+                  <div className="rv-summary-block">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+                      </svg>
+                      Accepted Proposals
+                    </h4>
+                    <ul className="rv-summary-list">
+                      {proposals.accepted.map((p, i) => <li key={i}>{p.content}</li>)}
+                    </ul>
+                  </div>
+                )}
               </div>
             )
           })()}
         </div>
 
-        {/* Transcript */}
         <div className="rv-transcript">
           {(() => {
-            const feed = demo ? mockTranscript : chunks.map((c) => ({
+            const feed = chunks.map((c) => ({
               id: c.id,
               speaker: c.speaker,
               role: '',
@@ -591,7 +398,6 @@ function Review() {
           })()}
         </div>
 
-        {/* Action items section with tabs */}
         <div className="rv-actions-section">
           <div className="rv-actions-header">
             <div className="rv-tabs">
@@ -634,32 +440,23 @@ function Review() {
             </div>
             <span className="rv-kanban-hint">
               {activeTab === 'tasks'
-                ? 'Edit or reject suggestions before approving · Drag to move'
+                ? 'Edit or reject suggestions before approving'
                 : activeTab === 'schedule'
-                ? 'Confirm meetings to schedule · Edit titles before confirming'
-                : 'Review deferred topics · Approve to add to the Parking Lot'}
+                ? 'Confirm meetings to schedule'
+                : 'Review deferred topics'}
             </span>
           </div>
 
-          {/* Tasks tab — kanban */}
           {activeTab === 'tasks' && (
             <div className="rv-kanban-board">
-              {/* Suggestions */}
-              <div
-                className={`rv-col ${dragOverCol === 'suggested' ? 'rv-col--dragover' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); setDragOverCol('suggested') }}
-                onDragLeave={() => setDragOverCol(null)}
-                onDrop={(e) => handleDrop(e, 'suggested')}
-              >
+              <div className="rv-col">
                 <div className="rv-col-header">
                   <span className="rv-col-title">AI Suggestions</span>
                   <span className="rv-col-count">{suggestedTasks.length}</span>
                 </div>
                 <div className="rv-col-cards">
                   {suggestedTasks.map((task) => (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} className="rv-card-drag-wrapper">
-                      <SuggestionCard task={task} onApprove={approveTask} onReject={rejectTask} onEdit={editTask} />
-                    </div>
+                    <SuggestionCard key={task.id} task={task} onApprove={approveTask} onReject={rejectTask} onEdit={editTask} />
                   ))}
                   {suggestedTasks.length === 0 && (
                     <div className="rv-col-empty">
@@ -672,22 +469,14 @@ function Review() {
                 </div>
               </div>
 
-              {/* Approved */}
-              <div
-                className={`rv-col rv-col--approved ${dragOverCol === 'approved' ? 'rv-col--dragover' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); setDragOverCol('approved') }}
-                onDragLeave={() => setDragOverCol(null)}
-                onDrop={(e) => handleDrop(e, 'approved')}
-              >
+              <div className="rv-col rv-col--approved">
                 <div className="rv-col-header">
                   <span className="rv-col-title">Approved</span>
                   <span className="rv-col-count rv-col-count--green">{approvedTasks.length}</span>
                 </div>
                 <div className="rv-col-cards">
                   {approvedTasks.map((task) => (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} className="rv-card-drag-wrapper">
-                      <ApprovedCard task={task} onUndo={undoTask} />
-                    </div>
+                    <ApprovedCard key={task.id} task={task} onUndo={undoTask} />
                   ))}
                   {approvedTasks.length === 0 && (
                     <div className="rv-col-empty">
@@ -702,26 +491,18 @@ function Review() {
             </div>
           )}
 
-          {/* Parking Lot tab — kanban */}
           {activeTab === 'parking' && (
             <div className="rv-kanban-board">
-              <div
-                className={`rv-col ${dragOverCol === 'suggested' ? 'rv-col--dragover' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); setDragOverCol('suggested') }}
-                onDragLeave={() => setDragOverCol(null)}
-                onDrop={(e) => handleDrop(e, 'suggested')}
-              >
+              <div className="rv-col">
                 <div className="rv-col-header">
                   <span className="rv-col-title">Deferred Topics</span>
-                  <span className="rv-col-count">{suggestedParking.length}</span>
+                  <span className="rv-col-count">{parkingItems.filter((t) => t.status === 'suggested').length}</span>
                 </div>
                 <div className="rv-col-cards">
-                  {suggestedParking.map((task) => (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} className="rv-card-drag-wrapper">
-                      <SuggestionCard task={task} onApprove={approveTask} onReject={rejectTask} onEdit={editTask} />
-                    </div>
+                  {parkingItems.filter((t) => t.status === 'suggested').map((task) => (
+                    <SuggestionCard key={task.id} task={task} onApprove={approveTask} onReject={rejectTask} onEdit={editTask} />
                   ))}
-                  {suggestedParking.length === 0 && (
+                  {parkingItems.filter((t) => t.status === 'suggested').length === 0 && (
                     <div className="rv-col-empty">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <polyline points="20 6 9 17 4 12" />
@@ -732,23 +513,16 @@ function Review() {
                 </div>
               </div>
 
-              <div
-                className={`rv-col rv-col--approved ${dragOverCol === 'approved' ? 'rv-col--dragover' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); setDragOverCol('approved') }}
-                onDragLeave={() => setDragOverCol(null)}
-                onDrop={(e) => handleDrop(e, 'approved')}
-              >
+              <div className="rv-col rv-col--approved">
                 <div className="rv-col-header">
                   <span className="rv-col-title">Added to Parking Lot</span>
-                  <span className="rv-col-count rv-col-count--green">{approvedParking.length}</span>
+                  <span className="rv-col-count rv-col-count--green">{parkingItems.filter((t) => t.status === 'approved').length}</span>
                 </div>
                 <div className="rv-col-cards">
-                  {approvedParking.map((task) => (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} className="rv-card-drag-wrapper">
-                      <ApprovedCard task={task} onUndo={undoTask} />
-                    </div>
+                  {parkingItems.filter((t) => t.status === 'approved').map((task) => (
+                    <ApprovedCard key={task.id} task={task} onUndo={undoTask} />
                   ))}
-                  {approvedParking.length === 0 && (
+                  {parkingItems.filter((t) => t.status === 'approved').length === 0 && (
                     <div className="rv-col-empty">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <path d="M5 12h14" /><path d="M12 5l7 7-7 7" />
@@ -761,46 +535,9 @@ function Review() {
             </div>
           )}
 
-          {/* To Schedule tab — list */}
           {activeTab === 'schedule' && (
             <div className="rv-schedule-list">
-              {pendingSchedule.length > 0 && (
-                <div className="rv-schedule-group">
-                  <div className="rv-schedule-group-label">
-                    Pending
-                    <span className="rv-schedule-group-count">{pendingSchedule.length}</span>
-                  </div>
-                  {pendingSchedule.map((task) => (
-                    <ScheduleItem
-                      key={task.id}
-                      task={task}
-                      onConfirm={approveTask}
-                      onReject={rejectTask}
-                      onEdit={editTask}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {confirmedSchedule.length > 0 && (
-                <div className="rv-schedule-group">
-                  <div className="rv-schedule-group-label rv-schedule-group-label--confirmed">
-                    Confirmed
-                    <span className="rv-schedule-group-count rv-schedule-group-count--green">{confirmedSchedule.length}</span>
-                  </div>
-                  {confirmedSchedule.map((task) => (
-                    <ScheduleItem
-                      key={task.id}
-                      task={task}
-                      onConfirm={approveTask}
-                      onReject={undoTask}
-                      onEdit={editTask}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {pendingSchedule.length === 0 && confirmedSchedule.length === 0 && (
+              {scheduleItems.length === 0 && (
                 <div className="rv-col-empty" style={{ padding: '48px' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <polyline points="20 6 9 17 4 12" />
@@ -808,19 +545,27 @@ function Review() {
                   No meetings to schedule
                 </div>
               )}
+              {scheduleItems.map((task) => (
+                <div className="rv-schedule-item" key={task.id}>
+                  <div className="rv-schedule-item-left">
+                    <div className="rv-schedule-dot">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="rv-schedule-item-body">
+                    <p className="rv-schedule-item-title">{task.title}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       </div>
-
-      {syncState === 'done' && (
-        <div className="rv-toast">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Successfully synced {allApproved.length} approved items to external system
-        </div>
-      )}
     </div>
   )
 }
