@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { mockTranscript, mockPreviousParkingLot } from '../mockData'
-import { leaveMeeting, openInsightSocket, getTranscript } from '../api'
+import { leaveMeeting, openInsightSocket, getTranscript, explainMeeting } from '../api'
 import { useDemoMode } from '../DemoContext'
 import './Live.css'
 
@@ -62,6 +62,8 @@ function Live() {
 
   const [transcript, setTranscript] = useState(demo ? mockTranscript.slice(0, 4) : [])
   const [transcriptLoading, setTranscriptLoading] = useState(!demo && !!parsedMeetingId)
+  const [explainLoading, setExplainLoading] = useState(false)
+  const [explainTime, setExplainTime] = useState(null)
   const [bannerOpen, setBannerOpen] = useState(true)
   const [conflict, setConflict] = useState(false)
   const [autoMode, setAutoMode] = useState(false)
@@ -205,6 +207,40 @@ function Live() {
 
   const handleConflictReject = () => {
     setConflict(false)
+  }
+
+  const handleExplainTechnical = async () => {
+    if (demo) {
+      setClarityModal(CLARITY_CONTENT.technical)
+    } else if (parsedMeetingId) {
+      setExplainLoading(true)
+      try {
+        const data = await explainMeeting(parsedMeetingId, 'technical', explainTime)
+        setClarityModal(data.technical || CLARITY_CONTENT.technical)
+      } catch (e) {
+        console.error('[Live] explain technical failed:', e)
+        setClarityModal({ title: 'Error', lines: ['Failed to generate explanation. Please try again.'] })
+      } finally {
+        setExplainLoading(false)
+      }
+    }
+  }
+
+  const handleExplainBusiness = async () => {
+    if (demo) {
+      setClarityModal(CLARITY_CONTENT.business)
+    } else if (parsedMeetingId) {
+      setExplainLoading(true)
+      try {
+        const data = await explainMeeting(parsedMeetingId, 'business', explainTime)
+        setClarityModal(data.business || CLARITY_CONTENT.business)
+      } catch (e) {
+        console.error('[Live] explain business failed:', e)
+        setClarityModal({ title: 'Error', lines: ['Failed to generate explanation. Please try again.'] })
+      } finally {
+        setExplainLoading(false)
+      }
+    }
   }
 
   const speakerInitials = (name) =>
@@ -361,25 +397,41 @@ function Live() {
       {/* Panel D — Clarity Bar */}
       <div className="live-clarity-bar">
         <span className="live-clarity-label">Instant Clarity</span>
-        {demo && (
-          <>
-            <button className="live-clarity-btn live-clarity-btn--tech" onClick={() => setClarityModal(CLARITY_CONTENT.technical)}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
-              </svg>
-              Explain — Technical
-            </button>
-            <button className="live-clarity-btn live-clarity-btn--biz" onClick={() => setClarityModal(CLARITY_CONTENT.business)}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                <line x1="8" y1="21" x2="16" y2="21" />
-                <line x1="12" y1="17" x2="12" y2="21" />
-              </svg>
-              Explain — Business
-            </button>
-          </>
-        )}
+        
+        <select 
+          className="live-clarity-select" 
+          value={explainTime || ''} 
+          onChange={(e) => setExplainTime(e.target.value ? parseInt(e.target.value, 10) : null)}
+        >
+          <option value="">Entire Meeting</option>
+          <option value="2">Last 2 mins</option>
+          <option value="5">Last 5 mins</option>
+        </select>
+
+        <button 
+          className="live-clarity-btn live-clarity-btn--tech" 
+          onClick={handleExplainTechnical}
+          disabled={explainLoading && !demo}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
+          </svg>
+          {explainLoading && !demo ? 'Loading…' : 'Explain — Technical'}
+        </button>
+        <button 
+          className="live-clarity-btn live-clarity-btn--biz" 
+          onClick={handleExplainBusiness}
+          disabled={explainLoading && !demo}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+          {explainLoading && !demo ? 'Loading…' : 'Explain — Business'}
+        </button>
+
         {parsedMeetingId && (
           <>
           <button

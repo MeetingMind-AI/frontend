@@ -87,6 +87,23 @@ export async function getTranscript(meetingId) {
   return res.json() // { meeting_id, status, chunks: [{id, speaker, text, timestamp}] }
 }
 
+export async function explainMeeting(meetingId, mode, lastXMinutes = null) {
+  const payload = { mode }
+  if (lastXMinutes !== null) {
+    payload.last_x_minutes = lastXMinutes
+  }
+  const res = await fetch(`${BASE}/api/meetings/${meetingId}/explain`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(extractError(body, res.status))
+  }
+  return res.json()
+}
+
 export async function renameMeeting(meetingId, title) {
   const res = await fetch(`${BASE}/api/meetings/${meetingId}`, {
     method: 'PATCH',

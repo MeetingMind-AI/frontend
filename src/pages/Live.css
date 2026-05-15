@@ -586,6 +586,27 @@
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
+.live-clarity-select {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-2);
+  transition: border-color 0.15s, color 0.15s;
+  cursor: pointer;
+  outline: none;
+}
+
+.live-clarity-select:hover, .live-clarity-select:focus {
+  border-color: var(--border-hover);
+  color: var(--text-1);
+}
+
 .live-clarity-btn--tech {
   color: var(--accent);
   background: rgba(79, 142, 247, 0.07);
