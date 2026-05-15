@@ -166,7 +166,7 @@ function Live() {
     setExplainLoading(true)
     try {
       const data = await explainMeeting(parsedMeetingId, 'technical', explainTime)
-      setModal({ type: 'clarity', title: data.technical?.title || 'Technical Summary', lines: data.technical?.lines || [] })
+      setModal({ type: 'clarity', title: 'Technical Summary', lines: data.explanation ? [data.explanation] : [] })
     } catch (e) {
       console.error('[Live] explain technical failed:', e)
       setModal({ type: 'clarity', title: 'Error', lines: ['Failed to generate explanation. Please try again.'] })
@@ -180,7 +180,7 @@ function Live() {
     setExplainLoading(true)
     try {
       const data = await explainMeeting(parsedMeetingId, 'business', explainTime)
-      setModal({ type: 'clarity', title: data.business?.title || 'Business Summary', lines: data.business?.lines || [] })
+      setModal({ type: 'clarity', title: 'Business Summary', lines: data.explanation ? [data.explanation] : [] })
     } catch (e) {
       console.error('[Live] explain business failed:', e)
       setModal({ type: 'clarity', title: 'Error', lines: ['Failed to generate explanation. Please try again.'] })
