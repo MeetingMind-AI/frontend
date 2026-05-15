@@ -32,14 +32,11 @@ function Live() {
   const [explainLoading, setExplainLoading] = useState(false)
   const [explainTime, setExplainTime] = useState(null)
   const [elapsed, setElapsed] = useState(0)
-  const [liveInsights, setLiveInsights] = useState([])
   const [wsStatus, setWsStatus] = useState(parsedMeetingId ? 'connecting' : 'disconnected')
   const [toastProposal, setToastProposal] = useState(null)
   const [modal, setModal] = useState(null)
   const [pendingProposals, setPendingProposals] = useState([])
   const [acceptedProposals, setAcceptedProposals] = useState([])
-
-  const MAX_INSIGHTS = 50
 
   const meetingTitle = parsedMeetingId ? `Meeting #${parsedMeetingId}` : 'Live Meeting'
   const participants = transcript ? [...new Set(transcript.map((m) => m.speaker))] : []
@@ -69,11 +66,6 @@ function Live() {
           return [...prev, mapChunk(chunk)]
         })
       },
-      onInsight: ({ role, text }) =>
-        setLiveInsights((prev) => {
-          const next = [...prev, { role, text }]
-          return next.length > MAX_INSIGHTS ? next.slice(-MAX_INSIGHTS) : next
-        }),
       onProposal: (proposal) => {
         setPendingProposals((prev) => [...prev, proposal])
         setToastProposal(proposal)
@@ -307,24 +299,6 @@ function Live() {
         {parsedMeetingId && (
           <>
           <button
-            className="live-clarity-btn live-clarity-btn--ai"
-            onClick={() => setModal({ type: 'insights' })}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            AI Insights
-            {liveInsights.length > 0 && (
-              <span style={{
-                marginLeft: '5px', background: 'var(--accent)', color: '#fff',
-                borderRadius: '99px', padding: '1px 6px', fontSize: '11px', fontWeight: 600,
-              }}>
-                {liveInsights.length}
-              </span>
-            )}
-          </button>
-
-          <button
             className="live-clarity-btn live-clarity-btn--proposal"
             onClick={handleShowProposals}
           >
@@ -391,8 +365,7 @@ function Live() {
           <div className="live-modal" onClick={(e) => e.stopPropagation()}>
             <div className="live-modal-header">
               <span className="live-modal-title">
-                {modal.type === 'insights' ? 'Live AI Insights' :
-                 modal.type === 'proposals' ? 'Proposals' :
+                {modal.type === 'proposals' ? 'Proposals' :
                  modal.title || 'Details'}
               </span>
               <button className="live-modal-close" onClick={() => setModal(null)}>
@@ -403,23 +376,6 @@ function Live() {
               </button>
             </div>
             <div className="live-modal-body">
-              {modal.type === 'insights' && (liveInsights.length === 0 ? (
-                <p className="live-modal-line" style={{ color: 'var(--text-3)' }}>
-                  No insights yet — they'll appear as the transcript is processed.
-                </p>
-              ) : (
-                liveInsights.map((ins, i) => (
-                  <div key={i} style={{ marginBottom: '12px' }}>
-                    <span style={{
-                      fontSize: '10px', fontWeight: 600, textTransform: 'uppercase',
-                      letterSpacing: '0.07em', color: 'var(--accent)', display: 'block', marginBottom: '3px',
-                    }}>
-                      {ins.role.replace(/_/g, ' ')}
-                    </span>
-                    <p className="live-modal-line">{ins.text}</p>
-                  </div>
-                ))
-              ))}
               {modal.type === 'proposals' && (
                 <>
                   {pendingProposals.length === 0 && acceptedProposals.length === 0 && (

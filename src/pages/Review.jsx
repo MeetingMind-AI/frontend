@@ -148,6 +148,7 @@ function Review() {
   const [titleDraft, setTitleDraft] = useState('')
   const [copied, setCopied] = useState(false)
   const [proposals, setProposals] = useState({ pending: [], accepted: [], rejected: [] })
+  const [summaryTab, setSummaryTab] = useState('general')
 
   useEffect(() => {
     if (!parsedMeetingId) return
@@ -164,6 +165,24 @@ function Review() {
       .catch((e) => console.warn('[Review] fetch failed:', e))
       .finally(() => setLoading(false))
   }, [parsedMeetingId])
+
+  useEffect(() => {
+    if (!parsedMeetingId) return
+    if (meetingData?.status !== 'completed' || meetingData?.summary) return
+    const t = setInterval(async () => {
+      try {
+        const meeting = await getMeeting(parsedMeetingId)
+        if (meeting.summary) {
+          clearInterval(t)
+          setMeetingData(meeting)
+          const sm = parseScrumMaster(meeting.summary?.scrum_master)
+          const built = buildTasksFromSummary(sm, meeting.title)
+          if (built.length > 0) setTasks(built)
+        }
+      } catch {}
+    }, 5000)
+    return () => clearInterval(t)
+  }, [parsedMeetingId, meetingData?.status])
 
   const taskItems     = tasks.filter((t) => t.type === 'todo')
   const scheduleItems = tasks.filter((t) => t.type === 'schedule')
@@ -285,21 +304,32 @@ function Review() {
                 </div>
               )}
             </div>
+
+            {meetingData?.summary && (
+              <div className="rv-summary-tabs">
+                <button
+                  className={`rv-summary-tab${summaryTab === 'general' ? ' rv-summary-tab--active' : ''}`}
+                  onClick={() => setSummaryTab('general')}
+                >General</button>
+                <button
+                  className={`rv-summary-tab${summaryTab === 'technical' ? ' rv-summary-tab--active' : ''}`}
+                  onClick={() => setSummaryTab('technical')}
+                >Technical</button>
+                <button
+                  className={`rv-summary-tab${summaryTab === 'business' ? ' rv-summary-tab--active' : ''}`}
+                  onClick={() => setSummaryTab('business')}
+                >Business</button>
+              </div>
+            )}
           </div>
           {loading && (
             <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
               Loading summary...
             </div>
           )}
-          {!loading && (() => {
+          {!loading && meetingData?.summary && summaryTab === 'general' && (() => {
             const sm = parseScrumMaster(meetingData?.summary?.scrum_master)
-            if (!sm) return (
-              <div style={{ padding: '24px', color: 'var(--text-3)', fontSize: '13px' }}>
-                {meetingData?.status === 'completed'
-                  ? 'Summary generation failed or is unavailable.'
-                  : 'Summary will be generated when the meeting ends.'}
-              </div>
-            )
+            if (!sm) return null
             return (
               <div className="rv-summary-grid">
                 <div className="rv-summary-block rv-summary-block--full">
@@ -354,6 +384,119 @@ function Review() {
               </div>
             )
           })()}
+          {!loading && meetingData?.summary && summaryTab === 'technical' && (() => {
+            const tl = parseScrumMaster(meetingData?.summary?.tech_lead)
+            if (!tl) return null
+            return (
+              <div className="rv-summary-grid">
+                {tl.technical_decisions?.length > 0 && (
+                  <div className="rv-summary-block rv-summary-block--full">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="9 11 12 14 22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                      </svg>
+                      Technical Decisions
+                    </h4>
+                    <ul className="rv-summary-list">
+                      {tl.technical_decisions.map((d, i) => (
+                        <li key={i}>{d.decision}{d.rationale ? ` — ${d.rationale}` : ''}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {tl.architecture?.length > 0 && (
+                  <div className="rv-summary-block">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+                      </svg>
+                      Architecture
+                    </h4>
+                    <ul className="rv-summary-list">
+                      {tl.architecture.map((a, i) => <li key={i}>{a}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {tl.engineering_blockers?.length > 0 && (
+                  <div className="rv-summary-block">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                      </svg>
+                      Engineering Blockers
+                    </h4>
+                    <ul className="rv-summary-list rv-summary-list--warn">
+                      {tl.engineering_blockers.map((b, i) => (
+                        <li key={i}>{b.blocker}{b.owner ? ` — ${b.owner}` : ''}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+          {!loading && meetingData?.summary && summaryTab === 'business' && (() => {
+            const pm = parseScrumMaster(meetingData?.summary?.product_manager)
+            if (!pm) return null
+            return (
+              <div className="rv-summary-grid">
+                {pm.feature_requests?.length > 0 && (
+                  <div className="rv-summary-block rv-summary-block--full">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="9 11 12 14 22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                      </svg>
+                      Feature Requests
+                    </h4>
+                    <ul className="rv-summary-list">
+                      {pm.feature_requests.map((f, i) => (
+                        <li key={i}>{f.feature}{f.requester ? ` (requested by ${f.requester})` : ''}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {pm.ux_topics?.length > 0 && (
+                  <div className="rv-summary-block">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+                      </svg>
+                      UX Topics
+                    </h4>
+                    <ul className="rv-summary-list">
+                      {pm.ux_topics.map((u, i) => (
+                        <li key={i}>{u.topic}{u.description ? ` — ${u.description}` : ''}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {pm.roadmap_alignment?.length > 0 && (
+                  <div className="rv-summary-block">
+                    <h4 className="rv-summary-block-title">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                      </svg>
+                      Roadmap Alignment
+                    </h4>
+                    <ul className="rv-summary-list">
+                      {pm.roadmap_alignment.map((r, i) => (
+                        <li key={i}>{r.task}{r.owner ? ` — ${r.owner}` : ''}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+          {!loading && !meetingData?.summary && (
+            <div style={{ padding: '24px', color: 'var(--text-3)', fontSize: '13px' }}>
+              {meetingData?.status === 'completed'
+                ? 'Generating final summary... this may take a moment.'
+                : 'Summary will be generated when the meeting ends.'}
+            </div>
+          )}
         </div>
 
         <div className="rv-transcript">

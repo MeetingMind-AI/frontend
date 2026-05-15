@@ -211,6 +211,36 @@
   line-height: 1.65;
 }
 
+.rv-summary-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.rv-summary-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+
+.rv-summary-tab:hover {
+  color: var(--text-1);
+}
+
+.rv-summary-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
 .rv-transcript {
   background: var(--bg-2);
   border: 1px solid var(--border);
