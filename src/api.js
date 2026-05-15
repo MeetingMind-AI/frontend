@@ -148,7 +148,7 @@ export async function deleteMeeting(meetingId) {
   return res.json()
 }
 
-export function openInsightSocket(meetingId, { onInsight, onProposal, onOpen, onClose } = {}) {
+export function openInsightSocket(meetingId, { onChunk, onChunksSnapshot, onInsight, onProposal, onOpen, onClose } = {}) {
   const ws = new WebSocket(`${wsBase()}/api/ws/ingest/${meetingId}`)
 
   ws.onopen = () => onOpen?.()
@@ -157,18 +157,16 @@ export function openInsightSocket(meetingId, { onInsight, onProposal, onOpen, on
   ws.onmessage = ({ data }) => {
     try {
       const msg = JSON.parse(data)
-      const summary = msg.summary
-      if (summary) {
-        if (typeof summary === 'object') {
-          for (const [role, text] of Object.entries(summary)) {
-            if (text && text.toUpperCase() !== 'IGNORE') onInsight?.({ role, text })
-          }
-        } else if (typeof summary === 'string' && summary.toUpperCase() !== 'IGNORE') {
-          onInsight?.({ role: 'insight', text: summary })
-        }
-      }
-      if (msg.proposal) {
-        onProposal?.(msg.proposal)
+      const event = msg.event
+      const msgData = msg.data
+      if (event === 'transcript_snapshot') {
+        onChunksSnapshot?.(msgData.chunks ?? [])
+      } else if (event === 'transcript_chunk') {
+        onChunk?.(msgData)
+      } else if (event === 'insight') {
+        onInsight?.({ role: msgData.role, text: msgData.text })
+      } else if (event === 'proposal') {
+        onProposal?.(msgData)
       }
     } catch (e) {
       console.warn('[WS] failed to parse message', e)
@@ -176,11 +174,6 @@ export function openInsightSocket(meetingId, { onInsight, onProposal, onOpen, on
   }
 
   return {
-    send(speaker, text) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ speaker, text }))
-      }
-    },
     close() { ws.close() },
   }
 }

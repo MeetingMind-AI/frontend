@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { leaveMeeting, openInsightSocket, getTranscript, explainMeeting, getActions, updateAction } from '../api'
+import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction } from '../api'
 import './Live.css'
 
 function playProposalSound(type) {
@@ -26,8 +26,7 @@ function Live() {
   const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
   const nativeId = searchParams.get('native')
 
-  const [transcript, setTranscript] = useState([])
-  const [transcriptLoading, setTranscriptLoading] = useState(!!parsedMeetingId)
+  const [transcript, setTranscript] = useState(null)
   const [explainLoading, setExplainLoading] = useState(false)
   const [explainTime, setExplainTime] = useState(null)
   const [elapsed, setElapsed] = useState(0)
@@ -41,17 +40,33 @@ function Live() {
   const MAX_INSIGHTS = 50
 
   const meetingTitle = parsedMeetingId ? `Meeting #${parsedMeetingId}` : 'Live Meeting'
-  const participants = [...new Set(transcript.map((m) => m.speaker))]
+  const participants = transcript ? [...new Set(transcript.map((m) => m.speaker))] : []
 
   const transcriptEndRef = useRef(null)
-  const sentCountRef = useRef(0)
   const wsRef = useRef(null)
+
+  const mapChunk = (c) => ({
+    id: c.id,
+    speaker: c.speaker,
+    text: c.text,
+    timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    role: '',
+  })
 
   useEffect(() => {
     if (!parsedMeetingId) return
     const ws = openInsightSocket(parsedMeetingId, {
       onOpen: () => setWsStatus('connected'),
       onClose: () => setWsStatus('disconnected'),
+      onChunksSnapshot: (chunks) => {
+        setTranscript(chunks.map(mapChunk))
+      },
+      onChunk: (chunk) => {
+        setTranscript((prev) => {
+          if (prev === null) return null
+          return [...prev, mapChunk(chunk)]
+        })
+      },
       onInsight: ({ role, text }) =>
         setLiveInsights((prev) => {
           const next = [...prev, { role, text }]
@@ -67,50 +82,7 @@ function Live() {
     return () => { ws.close(); wsRef.current = null }
   }, [parsedMeetingId])
 
-  useEffect(() => {
-    if (!parsedMeetingId) return
 
-    const poll = async () => {
-      try {
-        const data = await getTranscript(parsedMeetingId)
-        const chunks = data.chunks ?? []
-        setTranscriptLoading(false)
-        if (chunks.length === 0) return
-        const seen = new Set()
-        const deduped = chunks.filter((c) => {
-          const key = `${c.speaker}|||${c.text.trim()}`
-          if (seen.has(key)) return false
-          seen.add(key)
-          return true
-        })
-        setTranscript(
-          deduped.map((c) => ({
-            id: c.id,
-            speaker: c.speaker,
-            text: c.text,
-            timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            role: '',
-          }))
-        )
-      } catch (e) {
-        console.warn('[Live] transcript poll failed:', e)
-        setTranscriptLoading(false)
-      }
-    }
-
-    poll()
-    const t = setInterval(poll, 5000)
-    return () => clearInterval(t)
-  }, [parsedMeetingId])
-
-  useEffect(() => {
-    if (!wsRef.current) return
-    while (sentCountRef.current < transcript.length) {
-      const entry = transcript[sentCountRef.current]
-      wsRef.current.send(entry.speaker, entry.text)
-      sentCountRef.current++
-    }
-  }, [transcript])
 
   useEffect(() => {
     const t = setInterval(() => setElapsed((e) => e + 1), 1000)
@@ -258,7 +230,7 @@ function Live() {
             </div>
           </div>
           <div className="live-transcript-feed">
-            {transcriptLoading && transcript.length === 0 && (
+            {transcript === null && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '12px', color: 'var(--text-3)', paddingTop: '60px' }}>
                 <div className="live-typing" style={{ gap: '5px' }}>
                   <span className="live-typing-dot" style={{ animationDelay: '0ms' }} />
@@ -268,12 +240,12 @@ function Live() {
                 <span style={{ fontSize: '13px' }}>Connecting to transcription...</span>
               </div>
             )}
-            {!transcriptLoading && transcript.length === 0 && (
+            {transcript !== null && transcript.length === 0 && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-3)', fontSize: '13px', paddingTop: '60px' }}>
                 No transcript captured yet — speak to begin.
               </div>
             )}
-            {transcript.map((msg) => (
+            {transcript && transcript.map((msg) => (
               <div className="live-msg" key={msg.id}>
                 <div className="live-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
                   {speakerInitials(msg.speaker)}
