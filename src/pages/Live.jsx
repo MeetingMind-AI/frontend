@@ -3,6 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction } from '../api'
 import './Live.css'
 
+const PROPOSAL_LABELS = { conflict: 'CONFLICT', blocker: 'BLOCKER', parking_lot: 'PARKING LOT' }
+
 function playProposalSound(type) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
@@ -355,7 +357,7 @@ function Live() {
           <div className={`live-proposal-toast live-proposal-toast--${toastProposal.type}`}>
             <div className="live-proposal-header">
               <div className={`live-proposal-badge live-proposal-badge--${toastProposal.type}`}>
-                {toastProposal.type === 'conflict' ? 'CONFLICT' : 'PARKING LOT'}
+                {PROPOSAL_LABELS[toastProposal.type] ?? 'PARKING LOT'}
               </div>
               <button className="live-proposal-close" onClick={() => setToastProposal(null)}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -437,7 +439,7 @@ function Live() {
                         <div key={p.id} className="live-proposal-card">
                           <div className="live-proposal-card-top">
                             <span className={`live-proposal-card-badge live-proposal-card-badge--${p.type}`}>
-                              {p.type === 'conflict' ? 'CONFLICT' : 'PARKING LOT'}
+                              {PROPOSAL_LABELS[p.type] ?? 'PARKING LOT'}
                             </span>
                           </div>
                           <p className="live-proposal-card-text">{p.content}</p>
@@ -465,7 +467,7 @@ function Live() {
                         <div key={p.id} className="live-proposal-card live-proposal-card--accepted">
                           <div className="live-proposal-card-top">
                             <span className={`live-proposal-card-badge live-proposal-card-badge--${p.type}`}>
-                              {p.type === 'conflict' ? 'CONFLICT' : 'PARKING LOT'}
+                              {PROPOSAL_LABELS[p.type] ?? 'PARKING LOT'}
                             </span>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5">
                               <polyline points="20 6 9 17 4 12" />
