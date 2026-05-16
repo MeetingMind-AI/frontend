@@ -218,35 +218,12 @@ export default function Dashboard() {
     })
     .filter((m) => !search.trim() || m.title.toLowerCase().includes(search.toLowerCase()))
 
-  const totalActionItems = meetings.reduce((s, m) => s + m.actionItemCount, 0)
-  const totalParking = meetings.reduce((s, m) => s + m.parkingLotCount, 0)
-  const pendingReview = meetings.filter((m) => !m.reviewed).length
-
   return (
     <div className="dash-page">
       <div className="dash-page-header">
         <div>
           <h1 className="dash-page-title">Dashboard</h1>
           <p className="dash-page-subtitle">Overview of your meetings and action items</p>
-        </div>
-      </div>
-
-      <div className="dash-stats-row">
-        <div className="dash-stat-card">
-          <div className="dash-stat-card-num">{meetings.length}</div>
-          <div className="dash-stat-card-label">Total meetings</div>
-        </div>
-        <div className="dash-stat-card dash-stat-card--warn">
-          <div className="dash-stat-card-num" style={{ color: 'var(--yellow)' }}>{pendingReview}</div>
-          <div className="dash-stat-card-label">Needs review</div>
-        </div>
-        <div className="dash-stat-card">
-          <div className="dash-stat-card-num">{totalActionItems}</div>
-          <div className="dash-stat-card-label">Action items</div>
-        </div>
-        <div className="dash-stat-card">
-          <div className="dash-stat-card-num" style={{ color: 'var(--yellow)' }}>{totalParking}</div>
-          <div className="dash-stat-card-label">Parking lot items</div>
         </div>
       </div>
 
@@ -339,7 +316,7 @@ export default function Dashboard() {
           <div className="dash-filter-tabs">
             {[
               { key: 'all', label: `All (${meetings.length})` },
-              { key: 'pending', label: `In Progress (${pendingReview})` },
+              { key: 'pending', label: `In Progress (${meetings.filter((m) => !m.reviewed).length})` },
               { key: 'reviewed', label: 'Finalized' },
             ].map((f) => (
               <button

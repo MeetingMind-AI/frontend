@@ -110,14 +110,27 @@ export async function getActions(meetingId) {
     const body = await res.json().catch(() => ({}))
     throw new Error(extractError(body, res.status))
   }
-  return res.json() // { parking_lot: { pending: [...], accepted: [...], rejected: [...] }, task: {...}, to_schedule: {...} }
+  return res.json() // { parking_lot: { pending: [...], accepted: [...], rejected: [...] }, to_do: {...}, to_schedule: {...} }
 }
 
-export async function updateAction(meetingId, actionId, status) {
+export async function getAllActions() {
+  const res = await fetch(`${BASE}/api/actions`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(extractError(body, res.status))
+  }
+  return res.json()
+}
+
+export async function updateAction(meetingId, actionId, status, content, scheduledDate) {
+  const body = {}
+  if (status !== undefined) body.status = status
+  if (content !== undefined) body.content = content
+  if (scheduledDate !== undefined) body.scheduled_date = scheduledDate
   const res = await fetch(`${BASE}/api/meetings/${meetingId}/actions/${actionId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))

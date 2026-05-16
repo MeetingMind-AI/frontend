@@ -39,46 +39,50 @@ export function meetingToCard(m) {
 const itemLabel = (t) =>
   typeof t === 'string' ? t : `${t.task ?? ''}${t.owner ? ` (${t.owner})` : ''}`
 
-// Build GlobalKanban task entries from all meetings
-export function buildKanbanTasks(meetings) {
+// Build GlobalKanban task entries from all actions
+export function buildKanbanTasks(actions) {
   const items = []
-  for (const m of meetings) {
-    const sm = parseScrumMaster(m.summary?.scrum_master)
-    if (!sm?.to_do?.length) continue
-    const title = formatMeetingTitle(m.title)
-    const date = formatDate(m.created_at)
-    sm.to_do.forEach((t, i) =>
-      items.push({ id: `${m.id}-todo-${i}`, title: itemLabel(t), meeting: title, meetingDate: date, type: 'todo', kanban_status: 'todo' })
-    )
+  for (const p of (actions.to_do?.accepted ?? [])) {
+    items.push({
+      id: p.id,
+      title: p.content,
+      meeting: formatMeetingTitle(p.meeting_title),
+      meetingDate: formatDate(p.meeting_date),
+      type: 'todo',
+      kanban_status: 'todo',
+    })
   }
   return items
 }
 
-// Build GlobalParkingLot entries from all meetings
-export function buildParkingLotItems(meetings) {
+// Build GlobalParkingLot entries from all actions
+export function buildParkingLotItems(actions) {
   const items = []
-  for (const m of meetings) {
-    const sm = parseScrumMaster(m.summary?.scrum_master)
-    if (!sm?.parking_lot?.length) continue
-    const title = formatMeetingTitle(m.title)
-    const date = formatDate(m.created_at)
-    sm.parking_lot.forEach((t, i) =>
-      items.push({ id: `${m.id}-park-${i}`, text: typeof t === 'string' ? t : (t.task ?? String(t)), meeting: title, date, status: 'open' })
-    )
+  for (const p of (actions.parking_lot?.accepted ?? [])) {
+    items.push({
+      id: p.id,
+      text: p.content,
+      meeting: formatMeetingTitle(p.meeting_title),
+      date: formatDate(p.meeting_date),
+      status: 'open',
+    })
   }
   return items
 }
 
-// Build GlobalSchedule entries from all meetings
-export function buildScheduleItems(meetings) {
+// Build GlobalSchedule entries from all actions
+export function buildScheduleItems(actions) {
   const items = []
-  for (const m of meetings) {
-    const sm = parseScrumMaster(m.summary?.scrum_master)
-    if (!sm?.pending_to_schedule?.length) continue
-    const title = formatMeetingTitle(m.title)
-    sm.pending_to_schedule.forEach((t, i) =>
-      items.push({ id: `${m.id}-sched-${i}`, title: itemLabel(t), meeting: title, type: 'schedule', schedule_status: 'pending' })
-    )
+  for (const p of (actions.to_schedule?.accepted ?? [])) {
+    items.push({
+      id: p.id,
+      meeting_id: p.meeting_id,
+      title: p.content,
+      meeting: formatMeetingTitle(p.meeting_title),
+      type: 'schedule',
+      schedule_status: p.scheduled_date ? 'scheduled' : 'pending',
+      scheduledDate: p.scheduled_date || null,
+    })
   }
   return items
 }

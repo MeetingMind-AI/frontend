@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction } from '../api'
 import './Live.css'
 
-const PROPOSAL_LABELS = { task: 'TASK', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
+const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
 
 function playProposalSound(type) {
   try {

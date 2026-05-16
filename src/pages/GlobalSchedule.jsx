@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
-import { getMeetings } from '../api'
+import { getAllActions, updateAction } from '../api'
 import { buildScheduleItems } from '../utils'
 import './GlobalKanban.css'
-
-const MOCK_DATES = ['May 7, 2026', 'May 9, 2026', 'May 14, 2026', 'May 19, 2026']
 
 function ScheduleRow({ item, onSchedule, onRemove }) {
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -73,15 +71,17 @@ function ScheduleRow({ item, onSchedule, onRemove }) {
           <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onClick={() => setPickerOpen(false)} />
           <div className="gk-date-picker" style={{ zIndex: 10 }}>
             <p className="gk-date-picker-label">Pick a date</p>
-            {MOCK_DATES.map((d) => (
-              <button
-                key={d}
-                className={`gk-date-option ${item.scheduledDate === d ? 'gk-date-option--selected' : ''}`}
-                onClick={() => { onSchedule(item.id, d); setPickerOpen(false) }}
-              >
-                {d}
-              </button>
-            ))}
+            <input
+              type="date"
+              className="gk-date-input"
+              onChange={(e) => {
+                if (e.target.value) {
+                  onSchedule(item.id, item.meeting_id, e.target.value)
+                  setPickerOpen(false)
+                }
+              }}
+              autoFocus
+            />
           </div>
         </>
       )}
@@ -93,22 +93,23 @@ export default function GlobalSchedule() {
   const [tasks, setTasks] = useState([])
 
   useEffect(() => {
-    getMeetings()
-      .then((data) => setTasks(buildScheduleItems(data.meetings ?? [])))
+    getAllActions()
+      .then((data) => setTasks(buildScheduleItems(data)))
       .catch(() => {})
   }, [])
-  const [filterMeeting, setFilterMeeting] = useState('all')
+  const schedPending   = tasks.filter((t) => t.schedule_status === 'pending')
+  const schedScheduled = tasks.filter((t) => t.schedule_status === 'scheduled')
 
-  const meetings = [...new Set(tasks.map((t) => t.meeting))]
-  const visible = tasks.filter((t) => filterMeeting === 'all' || t.meeting === filterMeeting)
-
-  const schedPending   = visible.filter((t) => t.schedule_status === 'pending')
-  const schedScheduled = visible.filter((t) => t.schedule_status === 'scheduled')
-
-  const scheduleItem = (id, scheduledDate) =>
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, schedule_status: 'scheduled', scheduledDate } : t))
-    )
+  const scheduleItem = async (id, meeting_id, date) => {
+    try {
+      await updateAction(meeting_id, id, undefined, undefined, date)
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, schedule_status: 'scheduled', scheduledDate: date } : t))
+      )
+    } catch (e) {
+      console.warn('[Schedule] failed to schedule:', e)
+    }
+  }
 
   const removeItem = (id) =>
     setTasks((prev) => prev.filter((t) => t.id !== id))
@@ -118,16 +119,6 @@ export default function GlobalSchedule() {
       <header className="gk-header">
         <h1 className="gk-title">Schedule</h1>
         <div className="gk-filters">
-          <select
-            className="gk-filter-select"
-            value={filterMeeting}
-            onChange={(e) => setFilterMeeting(e.target.value)}
-          >
-            <option value="all">All Meetings</option>
-            {meetings.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
           <span className="gk-task-count">{tasks.length} items</span>
         </div>
       </header>

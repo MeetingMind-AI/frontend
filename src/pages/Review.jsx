@@ -202,8 +202,14 @@ function Review() {
     setTasks((prev) => prev.filter((t) => t.id !== id))
     try { await updateAction(parsedMeetingId, id, 'rejected') } catch {}
   }
-  const undoTask = (id) => updateTask(id, { status: 'suggested' })
-  const editTask = (id, title) => updateTask(id, { title })
+  const undoTask = async (id) => {
+    updateTask(id, { status: 'suggested' })
+    try { await updateAction(parsedMeetingId, id, 'pending') } catch {}
+  }
+  const editTask = async (id, title) => {
+    updateTask(id, { title })
+    try { await updateAction(parsedMeetingId, id, undefined, title) } catch {}
+  }
 
   return (
     <div className="rv-page">

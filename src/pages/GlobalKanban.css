@@ -502,6 +502,21 @@
   border-bottom: 1px solid var(--border);
 }
 
+.gk-date-input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-1);
+  font-size: 13px;
+  outline: none;
+}
+
+.gk-date-input:focus {
+  border-color: var(--accent);
+}
+
 .gk-date-option {
   display: block;
   width: 100%;
