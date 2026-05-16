@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction } from '../api'
 import './Live.css'
 
-const PROPOSAL_LABELS = { task: 'TASK', blocker: 'BLOCKER', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
+const PROPOSAL_LABELS = { task: 'TASK', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
 
 function playProposalSound(type) {
   try {
@@ -12,7 +12,7 @@ function playProposalSound(type) {
     const gain = ctx.createGain()
     osc.connect(gain)
     gain.connect(ctx.destination)
-    osc.frequency.value = type === 'blocker' ? 520 : 660
+    osc.frequency.value = 660
     osc.type = 'sine'
     gain.gain.setValueAtTime(0.2, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
@@ -39,7 +39,6 @@ function Live() {
   const [acceptedProposals, setAcceptedProposals] = useState([])
 
   const meetingTitle = parsedMeetingId ? `Meeting #${parsedMeetingId}` : 'Live Meeting'
-  const participants = transcript ? [...new Set(transcript.map((m) => m.speaker))] : []
 
   const transcriptEndRef = useRef(null)
   const wsRef = useRef(null)
@@ -119,8 +118,8 @@ function Live() {
   const handleShowProposals = async () => {
     try {
       const data = await getActions(parsedMeetingId)
-      setPendingProposals(data.pending ?? [])
-      setAcceptedProposals(data.accepted ?? [])
+      setPendingProposals(Object.values(data).flatMap(t => t.pending ?? []))
+      setAcceptedProposals(Object.values(data).flatMap(t => t.accepted ?? []))
     } catch (e) {
       console.warn('[Live] fetch actions failed:', e)
     }
@@ -184,20 +183,6 @@ function Live() {
             <span className="live-live-dot" /> LIVE
           </span>
           <span className="live-timer">{formatTime(elapsed)}</span>
-          {participants.length > 0 && (
-            <div className="live-participants">
-              {participants.map((name) => (
-                <div
-                  key={name}
-                  className="live-avatar"
-                  style={{ background: speakerColor(name) }}
-                  title={name}
-                >
-                  {speakerInitials(name)}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="live-header-right">

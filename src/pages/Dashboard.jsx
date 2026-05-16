@@ -106,33 +106,6 @@ function MeetingCard({ meeting, onRename, onDelete }) {
           </svg>
           {meeting.duration}
         </span>
-        <span className="dash-card-meta-item">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-          {meeting.participants.length} participants
-        </span>
-      </div>
-
-      <div className="dash-card-participants">
-        {meeting.participants.slice(0, 4).map((p) => (
-          <div
-            key={p}
-            className="dash-avatar"
-            style={{ background: speakerColor(p) }}
-            title={p}
-          >
-            {initials(p)}
-          </div>
-        ))}
-        {meeting.participants.length > 4 && (
-          <div className="dash-avatar dash-avatar--overflow">
-            +{meeting.participants.length - 4}
-          </div>
-        )}
       </div>
 
       <div className="dash-card-stats">
@@ -166,16 +139,27 @@ function MeetingCard({ meeting, onRename, onDelete }) {
             </svg>
           </button>
         )}
-        <button
-          className={`dash-card-cta ${!meeting.reviewed ? 'dash-card-cta--pending' : ''}`}
-          onClick={() => navigate(`/review/${meeting.id}`)}
-        >
-          {meeting.reviewed ? 'View Summary' : 'Open Meeting'}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-          </svg>
-        </button>
+        <div className="dash-card-actions">
+          {!meeting.reviewed && (
+            <button className="dash-card-cta dash-card-cta--live" onClick={() => navigate(`/live/${meeting.id}`)}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="10 8 16 12 10 16" fill="currentColor" stroke="none" />
+              </svg>
+              Go to live meeting
+            </button>
+          )}
+          <button
+            className={`dash-card-cta ${!meeting.reviewed ? 'dash-card-cta--pending' : ''}`}
+            onClick={() => navigate(`/review/${meeting.id}`)}
+          >
+            View Detail
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   )

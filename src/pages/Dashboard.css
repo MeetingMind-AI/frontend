@@ -343,36 +343,6 @@
   color: var(--text-2);
 }
 
-/* Participants */
-.dash-card-participants {
-  display: flex;
-}
-
-.dash-avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  font-weight: 700;
-  color: #fff;
-  margin-left: -6px;
-  border: 2px solid var(--bg-2);
-  flex-shrink: 0;
-}
-
-.dash-card-participants .dash-avatar:first-child {
-  margin-left: 0;
-}
-
-.dash-avatar--overflow {
-  background: var(--bg-4);
-  color: var(--text-2);
-  font-size: 8px;
-}
-
 /* Stats */
 .dash-card-stats {
   display: flex;
@@ -414,6 +384,25 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.dash-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.dash-card-cta--live {
+  color: var(--green);
+  border-color: rgba(63, 185, 80, 0.3);
+  background: rgba(63, 185, 80, 0.06);
+}
+
+.dash-card-cta--live:hover {
+  border-color: var(--green);
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--green);
 }
 
 .dash-card-tags {

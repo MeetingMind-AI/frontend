@@ -110,7 +110,7 @@ export async function getActions(meetingId) {
     const body = await res.json().catch(() => ({}))
     throw new Error(extractError(body, res.status))
   }
-  return res.json() // { pending: [...], accepted: [...], rejected: [...] }
+  return res.json() // { parking_lot: { pending: [...], accepted: [...], rejected: [...] }, task: {...}, to_schedule: {...} }
 }
 
 export async function updateAction(meetingId, actionId, status) {

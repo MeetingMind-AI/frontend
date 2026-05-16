@@ -28,7 +28,6 @@ export function meetingToCard(m) {
     title: formatMeetingTitle(m.title),
     date: formatDate(m.created_at),
     duration: m.status,
-    participants: [],
     reviewed: m.status === 'completed',
     actionItemCount: sm?.to_do?.length ?? 0,
     parkingLotCount: sm?.parking_lot?.length ?? 0,

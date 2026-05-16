@@ -135,19 +135,21 @@ function Review() {
   const [loading, setLoading] = useState(!!parsedMeetingId)
   const [titleEditing, setTitleEditing] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
-  const [proposals, setProposals] = useState({ pending: [], accepted: [], rejected: [] })
+  const [proposals, setProposals] = useState({})
   const [summaryTab, setSummaryTab] = useState('general')
 
   function proposalToTasks(proposals, meeting) {
     const items = []
     let id = 1
-    for (const p of (proposals.pending ?? [])) {
-      const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : 'todo'
-      items.push({ id: p.id || id++, title: p.content, type, status: 'suggested', meeting })
-    }
-    for (const p of (proposals.accepted ?? [])) {
-      const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : 'todo'
-      items.push({ id: p.id || id++, title: p.content, type, status: 'approved', meeting })
+    for (const typeGroup of Object.values(proposals)) {
+      for (const p of (typeGroup.pending ?? [])) {
+        const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : 'todo'
+        items.push({ id: p.id || id++, title: p.content, type, status: 'suggested', meeting })
+      }
+      for (const p of (typeGroup.accepted ?? [])) {
+        const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : 'todo'
+        items.push({ id: p.id || id++, title: p.content, type, status: 'approved', meeting })
+      }
     }
     return items
   }
@@ -333,19 +335,23 @@ function Review() {
                     </ul>
                   </div>
                 )}
-                {proposals.accepted.length > 0 && (
-                  <div className="rv-summary-block">
-                    <h4 className="rv-summary-block-title">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
-                      </svg>
-                      Accepted Proposals
-                    </h4>
-                    <ul className="rv-summary-list">
-                      {proposals.accepted.map((p, i) => <li key={i}>{p.content}</li>)}
-                    </ul>
-                  </div>
-                )}
+                {(() => {
+                  const allAccepted = Object.values(proposals).flatMap(t => t.accepted ?? [])
+                  if (allAccepted.length === 0) return null
+                  return (
+                    <div className="rv-summary-block">
+                      <h4 className="rv-summary-block-title">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+                        </svg>
+                        Accepted Proposals
+                      </h4>
+                      <ul className="rv-summary-list">
+                        {allAccepted.map((p, i) => <li key={i}>{p.content}</li>)}
+                      </ul>
+                    </div>
+                  )
+                })()}
               </div>
             )
           })()}
