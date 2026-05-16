@@ -122,11 +122,9 @@ export async function getAllActions() {
   return res.json()
 }
 
-export async function updateAction(meetingId, actionId, status, content, scheduledDate) {
-  const body = {}
-  if (status !== undefined) body.status = status
+export async function updateAction(meetingId, actionId, status, content) {
+  const body = { status }
   if (content !== undefined) body.content = content
-  if (scheduledDate !== undefined) body.scheduled_date = scheduledDate
   const res = await fetch(`${BASE}/api/meetings/${meetingId}/actions/${actionId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

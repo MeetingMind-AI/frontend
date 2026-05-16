@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { getAllActions, updateAction } from '../api'
+import { getAllActions } from '../api'
 import { buildScheduleItems } from '../utils'
 import './GlobalKanban.css'
+
+const MOCK_DATES = ['May 7, 2026', 'May 9, 2026', 'May 14, 2026', 'May 19, 2026']
 
 function ScheduleRow({ item, onSchedule, onRemove }) {
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -71,17 +73,15 @@ function ScheduleRow({ item, onSchedule, onRemove }) {
           <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onClick={() => setPickerOpen(false)} />
           <div className="gk-date-picker" style={{ zIndex: 10 }}>
             <p className="gk-date-picker-label">Pick a date</p>
-            <input
-              type="date"
-              className="gk-date-input"
-              onChange={(e) => {
-                if (e.target.value) {
-                  onSchedule(item.id, item.meeting_id, e.target.value)
-                  setPickerOpen(false)
-                }
-              }}
-              autoFocus
-            />
+            {MOCK_DATES.map((d) => (
+              <button
+                key={d}
+                className={`gk-date-option ${item.scheduledDate === d ? 'gk-date-option--selected' : ''}`}
+                onClick={() => { onSchedule(item.id, d); setPickerOpen(false) }}
+              >
+                {d}
+              </button>
+            ))}
           </div>
         </>
       )}
@@ -100,16 +100,10 @@ export default function GlobalSchedule() {
   const schedPending   = tasks.filter((t) => t.schedule_status === 'pending')
   const schedScheduled = tasks.filter((t) => t.schedule_status === 'scheduled')
 
-  const scheduleItem = async (id, meeting_id, date) => {
-    try {
-      await updateAction(meeting_id, id, undefined, undefined, date)
-      setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, schedule_status: 'scheduled', scheduledDate: date } : t))
-      )
-    } catch (e) {
-      console.warn('[Schedule] failed to schedule:', e)
-    }
-  }
+  const scheduleItem = (id, scheduledDate) =>
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, schedule_status: 'scheduled', scheduledDate } : t))
+    )
 
   const removeItem = (id) =>
     setTasks((prev) => prev.filter((t) => t.id !== id))

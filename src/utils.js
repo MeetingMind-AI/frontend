@@ -76,12 +76,10 @@ export function buildScheduleItems(actions) {
   for (const p of (actions.to_schedule?.accepted ?? [])) {
     items.push({
       id: p.id,
-      meeting_id: p.meeting_id,
       title: p.content,
       meeting: formatMeetingTitle(p.meeting_title),
       type: 'schedule',
-      schedule_status: p.scheduled_date ? 'scheduled' : 'pending',
-      scheduledDate: p.scheduled_date || null,
+      schedule_status: 'pending',
     })
   }
   return items
