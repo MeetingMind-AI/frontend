@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction } from '../api'
 import './Live.css'
 
-const PROPOSAL_LABELS = { conflict: 'CONFLICT', blocker: 'BLOCKER', parking_lot: 'PARKING LOT' }
+const PROPOSAL_LABELS = { task: 'TASK', blocker: 'BLOCKER', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
 
 function playProposalSound(type) {
   try {
@@ -12,7 +12,7 @@ function playProposalSound(type) {
     const gain = ctx.createGain()
     osc.connect(gain)
     gain.connect(ctx.destination)
-    osc.frequency.value = type === 'conflict' ? 520 : 660
+    osc.frequency.value = type === 'blocker' ? 520 : 660
     osc.type = 'sine'
     gain.gain.setValueAtTime(0.2, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)

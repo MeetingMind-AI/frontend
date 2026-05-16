@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { mockPreviousMeetings } from '../mockData'
 import { startMeeting, getMeetings, renameMeeting, deleteMeeting } from '../api'
-import { useDemoMode } from '../DemoContext'
 import { meetingToCard } from '../utils'
 import './Dashboard.css'
 
@@ -60,12 +58,12 @@ function MeetingCard({ meeting, onRename, onDelete }) {
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            Reviewed
+            Finalized
           </span>
         ) : (
           <span className="dash-status dash-status--pending">
             <span className="dash-status-pulse" />
-            Needs Review
+            In Progress
           </span>
         )}
         <span className="dash-card-date">{meeting.date}</span>
@@ -172,7 +170,7 @@ function MeetingCard({ meeting, onRename, onDelete }) {
           className={`dash-card-cta ${!meeting.reviewed ? 'dash-card-cta--pending' : ''}`}
           onClick={() => navigate(`/review/${meeting.id}`)}
         >
-          {meeting.reviewed ? 'View Review' : 'Open Review'}
+          {meeting.reviewed ? 'View Summary' : 'Open Meeting'}
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="5" y1="12" x2="19" y2="12" />
             <polyline points="12 5 19 12 12 19" />
@@ -185,22 +183,19 @@ function MeetingCard({ meeting, onRename, onDelete }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { demo } = useDemoMode()
   const [url, setUrl] = useState('')
   const [dispatchState, setDispatchState] = useState('idle')
   const [dispatchError, setDispatchError] = useState('')
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
 
-  const [meetings, setMeetings] = useState(demo ? mockPreviousMeetings : [])
+  const [meetings, setMeetings] = useState([])
 
   useEffect(() => {
-    if (demo) { setMeetings(mockPreviousMeetings); return }
-    setMeetings([])
     getMeetings()
       .then((data) => setMeetings((data.meetings ?? []).map(meetingToCard)))
       .catch((e) => console.warn('[Dashboard] fetch failed:', e))
-  }, [demo])
+  }, [])
 
   const handleDispatch = async () => {
     if (!url.trim() || dispatchState !== 'idle') return
@@ -222,16 +217,11 @@ export default function Dashboard() {
   }
 
   const handleRename = async (id, newTitle) => {
-    if (demo) {
-      setMeetings((prev) => prev.map((m) => m.id === id ? { ...m, title: newTitle } : m))
-      return
-    }
     await renameMeeting(id, newTitle)
     setMeetings((prev) => prev.map((m) => m.id === id ? { ...m, title: newTitle } : m))
   }
 
   const handleDelete = async (id) => {
-    if (demo) { setMeetings((prev) => prev.filter((m) => m.id !== id)); return }
     await deleteMeeting(id)
     setMeetings((prev) => prev.filter((m) => m.id !== id))
   }
@@ -365,8 +355,8 @@ export default function Dashboard() {
           <div className="dash-filter-tabs">
             {[
               { key: 'all', label: `All (${meetings.length})` },
-              { key: 'pending', label: `Needs Review (${pendingReview})` },
-              { key: 'reviewed', label: 'Reviewed' },
+              { key: 'pending', label: `In Progress (${pendingReview})` },
+              { key: 'reviewed', label: 'Finalized' },
             ].map((f) => (
               <button
                 key={f.key}

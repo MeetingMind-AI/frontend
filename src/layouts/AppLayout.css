@@ -167,66 +167,6 @@
   flex-shrink: 0;
 }
 
-/* ── Demo mode toggle ── */
-.sidebar-demo {
-  margin-top: auto;
-  padding: 12px 10px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.sidebar-demo-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-3);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.sidebar-demo-btn:hover {
-  background: var(--bg-3);
-  color: var(--text-1);
-}
-
-.sidebar-demo-btn--on {
-  background: rgba(210, 153, 34, 0.08);
-  border-color: rgba(210, 153, 34, 0.35);
-  color: var(--yellow);
-}
-
-.sidebar-demo-btn--on:hover {
-  background: rgba(210, 153, 34, 0.14);
-}
-
-.sidebar-demo-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--border);
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-
-.sidebar-demo-dot--on {
-  background: var(--yellow);
-  box-shadow: 0 0 0 3px rgba(210, 153, 34, 0.2);
-}
-
-.sidebar-demo-state {
-  margin-left: auto;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
 /* ── Main content area ── */
 .app-main {
   flex: 1;

@@ -1,19 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getMeeting, getTranscript, getActions, renameMeeting } from '../api'
+import { getMeeting, getTranscript, getActions, renameMeeting, updateAction } from '../api'
 import { parseScrumMaster, formatMeetingTitle, formatDate } from '../utils'
 import './Review.css'
-
-function buildTasksFromSummary(sm, meetingTitle) {
-  if (!sm) return []
-  const items = []
-  let id = 1
-  const label = (t) => typeof t === 'string' ? t : `${t.task ?? ''}${t.owner ? ` (${t.owner})` : ''}`
-  ;(sm.to_do ?? []).forEach((t) => items.push({ id: id++, title: label(t), type: 'todo', status: 'suggested', meeting: meetingTitle }))
-  ;(sm.pending_to_schedule ?? []).forEach((t) => items.push({ id: id++, title: label(t), type: 'schedule', status: 'suggested', meeting: meetingTitle }))
-  ;(sm.parking_lot ?? []).forEach((t) => items.push({ id: id++, title: typeof t === 'string' ? t : (t.task ?? String(t)), type: 'parking', status: 'suggested', meeting: meetingTitle }))
-  return items
-}
 
 function speakerColor(name) {
   const colors = ['#4f8ef7', '#3fb950', '#bc8cff', '#d29922', '#e3884c', '#f85149']
@@ -146,9 +135,22 @@ function Review() {
   const [loading, setLoading] = useState(!!parsedMeetingId)
   const [titleEditing, setTitleEditing] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
-  const [copied, setCopied] = useState(false)
   const [proposals, setProposals] = useState({ pending: [], accepted: [], rejected: [] })
   const [summaryTab, setSummaryTab] = useState('general')
+
+  function proposalToTasks(proposals, meeting) {
+    const items = []
+    let id = 1
+    for (const p of (proposals.pending ?? [])) {
+      const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : 'todo'
+      items.push({ id: p.id || id++, title: p.content, type, status: 'suggested', meeting })
+    }
+    for (const p of (proposals.accepted ?? [])) {
+      const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : 'todo'
+      items.push({ id: p.id || id++, title: p.content, type, status: 'approved', meeting })
+    }
+    return items
+  }
 
   useEffect(() => {
     if (!parsedMeetingId) return
@@ -158,8 +160,7 @@ function Review() {
         setMeetingData(meeting)
         setChunks(transcript.chunks ?? [])
         setProposals(actions)
-        const sm = parseScrumMaster(meeting.summary?.scrum_master)
-        const built = buildTasksFromSummary(sm, meeting.title)
+        const built = proposalToTasks(actions, meeting.title)
         if (built.length > 0) setTasks(built)
       })
       .catch((e) => console.warn('[Review] fetch failed:', e))
@@ -175,9 +176,6 @@ function Review() {
         if (meeting.summary) {
           clearInterval(t)
           setMeetingData(meeting)
-          const sm = parseScrumMaster(meeting.summary?.scrum_master)
-          const built = buildTasksFromSummary(sm, meeting.title)
-          if (built.length > 0) setTasks(built)
         }
       } catch {}
     }, 5000)
@@ -194,10 +192,16 @@ function Review() {
   const updateTask = (id, patch) =>
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
 
-  const approveTask = (id) => updateTask(id, { status: 'approved' })
-  const rejectTask  = (id) => setTasks((prev) => prev.filter((t) => t.id !== id))
-  const undoTask    = (id) => updateTask(id, { status: 'suggested' })
-  const editTask    = (id, title) => updateTask(id, { title })
+  const approveTask = async (id) => {
+    updateTask(id, { status: 'approved' })
+    try { await updateAction(parsedMeetingId, id, 'accepted') } catch {}
+  }
+  const rejectTask = async (id) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id))
+    try { await updateAction(parsedMeetingId, id, 'rejected') } catch {}
+  }
+  const undoTask = (id) => updateTask(id, { status: 'suggested' })
+  const editTask = (id, title) => updateTask(id, { title })
 
   return (
     <div className="rv-page">
@@ -256,38 +260,6 @@ function Review() {
         </div>
         <div className="rv-header-right">
           <button className="rv-btn rv-btn--ghost" onClick={() => navigate('/')}>← Dashboard</button>
-          {meetingData && (
-            <button
-              className={`rv-btn rv-btn--ghost ${copied ? 'rv-btn--copied' : ''}`}
-              onClick={() => {
-                const sm = parseScrumMaster(meetingData?.summary?.scrum_master)
-                if (!sm) return
-                const lines = []
-                if (sm.summary) lines.push(`Summary:\n${sm.summary}`)
-                if (sm.to_do?.length) lines.push(`\nAction Items:\n${sm.to_do.map((t, i) => `${i + 1}. ${typeof t === 'string' ? t : (t.task ?? '')}`).join('\n')}`)
-                if (sm.parking_lot?.length) lines.push(`\nParking Lot:\n${sm.parking_lot.map((t) => `- ${typeof t === 'string' ? t : (t.task ?? String(t))}`).join('\n')}`)
-                navigator.clipboard.writeText(lines.join('\n')).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
-              }}
-              disabled={!meetingData?.summary?.scrum_master}
-            >
-              {copied ? (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Copied
-                </>
-              ) : (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                  Copy Summary
-                </>
-              )}
-            </button>
-          )}
         </div>
       </header>
 
@@ -296,13 +268,6 @@ function Review() {
           <div className="rv-summary-header">
             <div className="rv-summary-title-row">
               <span className="rv-section-label">AI Meeting Summary</span>
-              {chunks.length > 0 && (
-                <div className="rv-participants">
-                  {[...new Set(chunks.map((c) => c.speaker))].map((p, i) => (
-                    <span key={i} className="rv-participant-chip">{p}</span>
-                  ))}
-                </div>
-              )}
             </div>
 
             {meetingData?.summary && (
@@ -499,48 +464,6 @@ function Review() {
           )}
         </div>
 
-        <div className="rv-transcript">
-          {(() => {
-            const feed = chunks.map((c) => ({
-              id: c.id,
-              speaker: c.speaker,
-              role: '',
-              text: c.text,
-              timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            }))
-            return (
-              <>
-                <div className="rv-transcript-header">
-                  <span className="rv-section-label">Full Transcript</span>
-                  <span className="rv-transcript-count">{feed.length} messages</span>
-                </div>
-                <div className="rv-transcript-feed">
-                  {feed.length === 0 && (
-                    <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
-                      {loading ? 'Loading transcript...' : 'No transcript available.'}
-                    </div>
-                  )}
-                  {feed.map((msg) => (
-                    <div className="rv-msg" key={msg.id}>
-                      <div className="rv-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
-                        {speakerInitials(msg.speaker)}
-                      </div>
-                      <div className="rv-msg-body">
-                        <div className="rv-msg-meta">
-                          <span className="rv-msg-speaker">{msg.speaker}</span>
-                          {msg.role && <span className="rv-msg-role">{msg.role}</span>}
-                          <span className="rv-msg-time">{msg.timestamp}</span>
-                        </div>
-                        <div className="rv-msg-text">{msg.text}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )
-          })()}
-        </div>
-
         <div className="rv-actions-section">
           <div className="rv-actions-header">
             <div className="rv-tabs">
@@ -707,6 +630,48 @@ function Review() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="rv-transcript">
+          {(() => {
+            const feed = chunks.map((c) => ({
+              id: c.id,
+              speaker: c.speaker,
+              role: '',
+              text: c.text,
+              timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            }))
+            return (
+              <>
+                <div className="rv-transcript-header">
+                  <span className="rv-section-label">Full Transcript</span>
+                  <span className="rv-transcript-count">{feed.length} messages</span>
+                </div>
+                <div className="rv-transcript-feed">
+                  {feed.length === 0 && (
+                    <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
+                      {loading ? 'Loading transcript...' : 'No transcript available.'}
+                    </div>
+                  )}
+                  {feed.map((msg) => (
+                    <div className="rv-msg" key={msg.id}>
+                      <div className="rv-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
+                        {speakerInitials(msg.speaker)}
+                      </div>
+                      <div className="rv-msg-body">
+                        <div className="rv-msg-meta">
+                          <span className="rv-msg-speaker">{msg.speaker}</span>
+                          {msg.role && <span className="rv-msg-role">{msg.role}</span>}
+                          <span className="rv-msg-time">{msg.timestamp}</span>
+                        </div>
+                        <div className="rv-msg-text">{msg.text}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )
+          })()}
         </div>
       </div>
     </div>

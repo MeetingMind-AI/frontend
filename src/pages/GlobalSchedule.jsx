@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
-import { mockAllKanbanTasks } from '../mockData'
 import { getMeetings } from '../api'
-import { useDemoMode } from '../DemoContext'
 import { buildScheduleItems } from '../utils'
 import './GlobalKanban.css'
 
@@ -92,21 +90,13 @@ function ScheduleRow({ item, onSchedule, onRemove }) {
 }
 
 export default function GlobalSchedule() {
-  const { demo } = useDemoMode()
-  const [tasks, setTasks] = useState(
-    demo ? mockAllKanbanTasks.filter((t) => t.type === 'schedule') : []
-  )
+  const [tasks, setTasks] = useState([])
 
   useEffect(() => {
-    if (demo) {
-      setTasks(mockAllKanbanTasks.filter((t) => t.type === 'schedule'))
-      return
-    }
-    setTasks([])
     getMeetings()
       .then((data) => setTasks(buildScheduleItems(data.meetings ?? [])))
       .catch(() => {})
-  }, [demo])
+  }, [])
   const [filterMeeting, setFilterMeeting] = useState('all')
 
   const meetings = [...new Set(tasks.map((t) => t.meeting))]
@@ -120,60 +110,51 @@ export default function GlobalSchedule() {
       prev.map((t) => (t.id === id ? { ...t, schedule_status: 'scheduled', scheduledDate } : t))
     )
 
-  const removeItem = (id) => setTasks((prev) => prev.filter((t) => t.id !== id))
+  const removeItem = (id) =>
+    setTasks((prev) => prev.filter((t) => t.id !== id))
 
   return (
     <div className="gk-page">
-      <div className="gk-page-header">
-        <div>
-          <h1 className="gk-page-title">To Schedule</h1>
-          <p className="gk-page-sub">Meetings and follow-ups pending a date</p>
-        </div>
-        <div className="gk-header-right">
-          <div className="gk-filters">
-            <span className="gk-filter-label">Meeting</span>
-            <select className="gk-select" value={filterMeeting} onChange={(e) => setFilterMeeting(e.target.value)}>
-              <option value="all">All meetings</option>
-              {meetings.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="gk-schedule-list">
-        {schedPending.length > 0 && (
-          <div className="gk-schedule-group">
-            <div className="gk-schedule-group-label">
-              Pending a date
-              <span className="gk-schedule-group-count gk-schedule-group-count--warn">{schedPending.length}</span>
-            </div>
-            {schedPending.map((item) => (
-              <ScheduleRow key={item.id} item={item} onSchedule={scheduleItem} onRemove={removeItem} />
+      <header className="gk-header">
+        <h1 className="gk-title">Schedule</h1>
+        <div className="gk-filters">
+          <select
+            className="gk-filter-select"
+            value={filterMeeting}
+            onChange={(e) => setFilterMeeting(e.target.value)}
+          >
+            <option value="all">All Meetings</option>
+            {meetings.map((m) => (
+              <option key={m} value={m}>{m}</option>
             ))}
-          </div>
-        )}
+          </select>
+          <span className="gk-task-count">{tasks.length} items</span>
+        </div>
+      </header>
 
-        {schedScheduled.length > 0 && (
-          <div className="gk-schedule-group">
-            <div className="gk-schedule-group-label">
-              Scheduled
-              <span className="gk-schedule-group-count gk-schedule-group-count--green">{schedScheduled.length}</span>
-            </div>
-            {schedScheduled.map((item) => (
-              <ScheduleRow key={item.id} item={item} onSchedule={scheduleItem} onRemove={removeItem} />
-            ))}
-          </div>
-        )}
+      {schedPending.length > 0 && (
+        <div className="gk-schedule-section">
+          <h2 className="gk-schedule-section-title">To Schedule ({schedPending.length})</h2>
+          {schedPending.map((t) => (
+            <ScheduleRow key={t.id} item={t} onSchedule={scheduleItem} onRemove={removeItem} />
+          ))}
+        </div>
+      )}
 
-        {visible.length === 0 && (
-          <div className="gk-schedule-empty">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <p>No meetings to schedule</p>
-          </div>
-        )}
-      </div>
+      {schedScheduled.length > 0 && (
+        <div className="gk-schedule-section">
+          <h2 className="gk-schedule-section-title">Scheduled ({schedScheduled.length})</h2>
+          {schedScheduled.map((t) => (
+            <ScheduleRow key={t.id} item={t} onSchedule={scheduleItem} onRemove={removeItem} />
+          ))}
+        </div>
+      )}
+
+      {tasks.length === 0 && (
+        <div className="gk-col-empty" style={{ padding: '48px' }}>
+          No items to schedule
+        </div>
+      )}
     </div>
   )
 }

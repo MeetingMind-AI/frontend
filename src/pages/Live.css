@@ -409,8 +409,12 @@
   border: 1px solid rgba(210, 153, 34, 0.4);
 }
 
-.live-proposal-toast--conflict {
-  border: 1px solid rgba(248, 81, 73, 0.4);
+.live-proposal-toast--task {
+  border: 1px solid rgba(79, 142, 247, 0.4);
+}
+
+.live-proposal-toast--to_schedule {
+  border: 1px solid rgba(188, 140, 255, 0.4);
 }
 
 .live-proposal-header {
@@ -433,9 +437,14 @@
   background: rgba(210, 153, 34, 0.15);
 }
 
-.live-proposal-badge--conflict {
-  color: var(--red);
-  background: rgba(248, 81, 73, 0.15);
+.live-proposal-badge--task {
+  color: var(--accent);
+  background: rgba(79, 142, 247, 0.15);
+}
+
+.live-proposal-badge--to_schedule {
+  color: var(--purple);
+  background: rgba(188, 140, 255, 0.15);
 }
 
 .live-proposal-close {
@@ -539,9 +548,14 @@
   background: rgba(210, 153, 34, 0.15);
 }
 
-.live-proposal-card-badge--conflict {
-  color: var(--red);
-  background: rgba(248, 81, 73, 0.15);
+.live-proposal-card-badge--task {
+  color: var(--accent);
+  background: rgba(79, 142, 247, 0.15);
+}
+
+.live-proposal-card-badge--to_schedule {
+  color: var(--purple);
+  background: rgba(188, 140, 255, 0.15);
 }
 
 .live-proposal-card-text {

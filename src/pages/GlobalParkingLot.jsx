@@ -1,25 +1,17 @@
 import { useState, useEffect } from 'react'
-import { mockAllParkingLotItems } from '../mockData'
 import { getMeetings } from '../api'
-import { useDemoMode } from '../DemoContext'
 import { buildParkingLotItems } from '../utils'
 import './GlobalParkingLot.css'
 
 export default function GlobalParkingLot() {
-  const { demo } = useDemoMode()
-  const [items, setItems] = useState(demo ? mockAllParkingLotItems : [])
+  const [items, setItems] = useState([])
 
   useEffect(() => {
-    if (demo) {
-      setItems(mockAllParkingLotItems)
-      return
-    }
-    setItems([])
     getMeetings()
       .then((data) => setItems(buildParkingLotItems(data.meetings ?? [])))
       .catch(() => {})
-  }, [demo])
-  const [filter, setFilter] = useState('all') // all | open | resolved
+  }, [])
+  const [filter, setFilter] = useState('all')
 
   const toggleStatus = (id) => {
     setItems((prev) =>
@@ -31,117 +23,73 @@ export default function GlobalParkingLot() {
     )
   }
 
-  const filtered = items.filter((i) => {
-    if (filter === 'open') return i.status === 'open'
-    if (filter === 'resolved') return i.status === 'resolved'
-    return true
-  })
-
-  const openCount = items.filter((i) => i.status === 'open').length
-  const resolvedCount = items.filter((i) => i.status === 'resolved').length
-
-  const grouped = filtered.reduce((acc, item) => {
-    if (!acc[item.meeting]) acc[item.meeting] = []
-    acc[item.meeting].push(item)
-    return acc
-  }, {})
+  const visible = items.filter((i) => filter === 'all' || i.status === filter)
+  const openItems = items.filter((i) => i.status === 'open')
+  const resolvedItems = items.filter((i) => i.status === 'resolved')
 
   return (
-    <div className="pl-page">
-      <div className="pl-page-header">
-        <div>
-          <h1 className="pl-page-title">Parking Lot</h1>
-          <p className="pl-page-sub">Deferred topics and unresolved items across all meetings</p>
+    <div className="gk-page">
+      <header className="gk-header">
+        <h1 className="gk-title">Parking Lot</h1>
+        <div className="gk-filters">
+          <span className="gk-task-count">{openItems.length} open</span>
+          {resolvedItems.length > 0 && (
+            <span className="gk-task-count gk-task-count--resolved">{resolvedItems.length} resolved</span>
+          )}
         </div>
-        <div className="pl-header-stats">
-          <div className="pl-header-stat">
-            <span className="pl-header-num" style={{ color: 'var(--yellow)' }}>{openCount}</span>
-            <span className="pl-header-label">Open</span>
-          </div>
-          <div className="pl-header-divider" />
-          <div className="pl-header-stat">
-            <span className="pl-header-num" style={{ color: 'var(--green)' }}>{resolvedCount}</span>
-            <span className="pl-header-label">Resolved</span>
-          </div>
-        </div>
-      </div>
+      </header>
 
-      {/* Filter tabs */}
-      <div className="pl-filters">
+      <div className="gk-tabs" style={{ padding: '16px 24px 0' }}>
         {[
           { key: 'all', label: `All (${items.length})` },
-          { key: 'open', label: `Open (${openCount})` },
-          { key: 'resolved', label: `Resolved (${resolvedCount})` },
-        ].map((f) => (
+          { key: 'open', label: `Open (${openItems.length})` },
+          { key: 'resolved', label: `Resolved (${resolvedItems.length})` },
+        ].map((t) => (
           <button
-            key={f.key}
-            className={`pl-filter-tab ${filter === f.key ? 'pl-filter-tab--active' : ''}`}
-            onClick={() => setFilter(f.key)}
+            key={t.key}
+            className={`gk-tab ${filter === t.key ? 'gk-tab--active' : ''}`}
+            onClick={() => setFilter(t.key)}
           >
-            {f.label}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* Grouped by meeting */}
-      <div className="pl-groups">
-        {Object.entries(grouped).map(([meeting, meetingItems]) => (
-          <div className="pl-group" key={meeting}>
-            <div className="pl-group-header">
-              <span className="pl-group-title">{meeting}</span>
-              <span className="pl-group-meta">
-                {meetingItems[0].date} · {meetingItems.length} item{meetingItems.length > 1 ? 's' : ''}
-              </span>
+      <div className="gk-parking-list">
+        {visible.map((item) => (
+          <div key={item.id} className={`gk-parking-row ${item.status === 'resolved' ? 'gk-parking-row--resolved' : ''}`}>
+            <div className="gk-parking-row-left">
+              <button
+                className={`gk-parking-check ${item.status === 'resolved' ? 'gk-parking-check--done' : ''}`}
+                onClick={() => toggleStatus(item.id)}
+                title={item.status === 'resolved' ? 'Reopen' : 'Mark resolved'}
+              >
+                {item.status === 'resolved' ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                  </svg>
+                )}
+              </button>
             </div>
-            <div className="pl-group-items">
-              {meetingItems.map((item) => (
-                <div
-                  key={item.id}
-                  className={`pl-item ${item.status === 'resolved' ? 'pl-item--resolved' : ''}`}
-                >
-                  <button
-                    className={`pl-item-toggle ${item.status === 'resolved' ? 'pl-item-toggle--done' : ''}`}
-                    onClick={() => toggleStatus(item.id)}
-                    title={item.status === 'open' ? 'Mark resolved' : 'Re-open'}
-                  >
-                    {item.status === 'resolved' ? (
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    ) : (
-                      <span className="pl-item-p">P</span>
-                    )}
-                  </button>
-
-                  <div className="pl-item-body">
-                    <p className="pl-item-text">{item.text}</p>
-                    <div className="pl-item-footer">
-                      <span className={`pl-item-status ${item.status === 'open' ? 'pl-item-status--open' : 'pl-item-status--resolved'}`}>
-                        {item.status === 'open' ? 'Open' : 'Resolved'}
-                      </span>
-                      <span className="pl-item-date">Added {item.date}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    className="pl-item-action"
-                    onClick={() => toggleStatus(item.id)}
-                    title={item.status === 'open' ? 'Mark as resolved' : 'Re-open'}
-                  >
-                    {item.status === 'open' ? 'Resolve' : 'Re-open'}
-                  </button>
-                </div>
-              ))}
+            <div className="gk-parking-row-body">
+              <p className="gk-parking-row-text">{item.text}</p>
+              <div className="gk-parking-row-meta">
+                <span className="gk-parking-meeting">{item.meeting}</span>
+                <span className="gk-parking-date">{item.date}</span>
+              </div>
             </div>
+            {item.status === 'resolved' && (
+              <span className="gk-parking-resolved-badge">Resolved</span>
+            )}
           </div>
         ))}
-
-        {Object.keys(grouped).length === 0 && (
-          <div className="pl-empty">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <p>No items match this filter</p>
+        {visible.length === 0 && (
+          <div className="gk-col-empty" style={{ padding: '48px' }}>
+            No items
           </div>
         )}
       </div>
