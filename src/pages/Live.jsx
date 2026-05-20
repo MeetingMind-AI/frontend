@@ -23,7 +23,7 @@ function playProposalSound(type) {
 
 function Live() {
   const navigate = useNavigate()
-  const { meetingId } = useParams()
+  const { teamId, meetingId } = useParams()
   const [searchParams] = useSearchParams()
   const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
   const nativeId = searchParams.get('native')
@@ -190,7 +190,7 @@ function Live() {
             if (parsedMeetingId) {
               try { await leaveMeeting(parsedMeetingId) } catch {}
             }
-            navigate(parsedMeetingId ? `/review/${parsedMeetingId}` : '/review')
+            navigate(parsedMeetingId ? `/teams/${teamId}/review/${parsedMeetingId}` : `/teams/${teamId}`)
           }}>
             End Meeting
           </button>

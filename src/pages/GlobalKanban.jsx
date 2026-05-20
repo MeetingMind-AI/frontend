@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { getAllActions } from '../api'
 import { buildKanbanTasks } from '../utils'
 import './GlobalKanban.css'
 
 export default function GlobalKanban() {
+  const { teamId } = useParams()
   const [tasks, setTasks] = useState([])
 
   useEffect(() => {
-    getAllActions()
+    getAllActions(teamId)
       .then((data) => setTasks(buildKanbanTasks(data)))
       .catch(() => {})
-  }, [])
+  }, [teamId])
 
   return (
     <div className="gk-page">
