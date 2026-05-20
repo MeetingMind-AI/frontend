@@ -167,6 +167,7 @@ function MeetingCard({ meeting, onRename, onDelete }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [platform, setPlatform] = useState('google_meet')
   const [url, setUrl] = useState('')
   const [dispatchState, setDispatchState] = useState('idle')
   const [dispatchError, setDispatchError] = useState('')
@@ -185,13 +186,13 @@ export default function Dashboard() {
     if (!url.trim() || dispatchState !== 'idle') return
     const nativeId = extractNativeId(url.trim())
     if (!nativeId) {
-      setDispatchError('Invalid Google Meet URL')
+      setDispatchError('Invalid meeting URL')
       return
     }
     setDispatchState('loading')
     setDispatchError('')
     try {
-      const { meeting_id } = await startMeeting('google_meet', nativeId)
+      const { meeting_id } = await startMeeting(platform, nativeId)
       setDispatchState('done')
       setTimeout(() => navigate(`/live/${meeting_id}?native=${encodeURIComponent(nativeId)}`), 800)
     } catch (err) {
@@ -236,14 +237,25 @@ export default function Dashboard() {
             </svg>
             Start a New Meeting
           </div>
-          <p className="dash-join-box-sub">Dispatch AI agents to an active Google Meet session</p>
+          <p className="dash-join-box-sub">Dispatch AI agents to an active meeting session</p>
         </div>
         <div className="dash-join-input-row">
+          <select
+            className="dash-platform-select"
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value)}
+            disabled={dispatchState !== 'idle'}
+            aria-label="Meeting platform"
+          >
+            <option value="google_meet">Google Meet</option>
+            <option value="zoom">Zoom</option>
+            <option value="teams">Microsoft Teams</option>
+          </select>
           <div className={`dash-join-input-group ${url ? 'dash-join-input-group--filled' : ''}`}>
             <input
               className="dash-join-input"
               type="url"
-              placeholder="https://meet.google.com/abc-defg-hij"
+              placeholder="Paste meeting URL"
               value={url}
               onChange={(e) => { setUrl(e.target.value); setDispatchError('') }}
               onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}

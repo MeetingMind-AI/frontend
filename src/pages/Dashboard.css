@@ -67,6 +67,27 @@
   max-width: 560px;
 }
 
+.dash-platform-select {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  min-width: 148px;
+  flex-shrink: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dash-platform-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.12);
+}
+
+.dash-platform-select:disabled {
+  opacity: 0.5;
+}
+
 .dash-join-input-group {
   flex: 1;
   background: var(--bg-3);
@@ -587,7 +608,11 @@
     align-items: flex-start;
   }
   .dash-join-input-row {
+    flex-wrap: wrap;
     width: 100%;
     max-width: none;
+  }
+  .dash-platform-select {
+    width: 100%;
   }
 }

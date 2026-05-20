@@ -64,7 +64,6 @@ function Join() {
             <input
               className="join-input"
               type="url"
-              placeholder="https://meet.google.com/abc-defg-hij"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}
