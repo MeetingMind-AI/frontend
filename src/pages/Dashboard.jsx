@@ -255,7 +255,7 @@ export default function Dashboard() {
             <input
               className="dash-join-input"
               type="url"
-              placeholder="Paste meeting URL"
+              placeholder="Paste meeting ID"
               value={url}
               onChange={(e) => { setUrl(e.target.value); setDispatchError('') }}
               onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}
