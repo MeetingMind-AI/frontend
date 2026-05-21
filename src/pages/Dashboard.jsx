@@ -4,6 +4,25 @@ import { startMeeting, getMeetings, renameMeeting, deleteMeeting } from '../api'
 import { meetingToCard } from '../utils'
 import './Dashboard.css'
 
+function parseTeamsUrl(raw) {
+  const passcodeMatch = raw.match(/[?&]p=([^&\s#]+)/i)
+  const passcode = passcodeMatch ? decodeURIComponent(passcodeMatch[1]) : ''
+
+  // teams.live.com/meetingOptions/meetings/{id}/view (meeting options page)
+  const meetingOptionsMatch = raw.match(/teams\.live\.com\/meetingOptions\/meetings\/(\d{10,15})/i)
+  if (meetingOptionsMatch) return { nativeId: meetingOptionsMatch[1], passcode }
+
+  // teams.live.com/meet/{id}?p={passcode}
+  const liveMatch = raw.match(/teams\.live\.com\/meet\/(\d{10,15})/i)
+  if (liveMatch) return { nativeId: liveMatch[1], passcode }
+
+  // teams.microsoft.com/l/meetup-join/{thread}/...
+  const msMatch = raw.match(/teams\.microsoft\.com\/l\/meetup-join\/([^\s?#/]+)/i)
+  if (msMatch) return { nativeId: decodeURIComponent(msMatch[1]).split('/')[0], passcode }
+
+  return null
+}
+
 function extractNativeId(url) {
   try {
     return new URL(url).pathname.split('/').filter(Boolean).pop() || null
@@ -169,6 +188,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [platform, setPlatform] = useState('google_meet')
   const [url, setUrl] = useState('')
+  const [passcode, setPasscode] = useState('')
   const [dispatchState, setDispatchState] = useState('idle')
   const [dispatchError, setDispatchError] = useState('')
   const [filter, setFilter] = useState('all')
@@ -184,7 +204,21 @@ export default function Dashboard() {
 
   const handleDispatch = async () => {
     if (!url.trim() || dispatchState !== 'idle') return
-    const nativeId = extractNativeId(url.trim())
+
+    let nativeId, resolvedPasscode
+    if (platform === 'teams') {
+      const parsed = parseTeamsUrl(url.trim())
+      if (!parsed) {
+        setDispatchError('Could not parse Teams URL. Paste the full meeting link.')
+        return
+      }
+      nativeId = parsed.nativeId
+      resolvedPasscode = passcode.trim() || parsed.passcode
+    } else {
+      nativeId = extractNativeId(url.trim())
+      resolvedPasscode = ''
+    }
+
     if (!nativeId) {
       setDispatchError('Invalid meeting URL')
       return
@@ -192,7 +226,7 @@ export default function Dashboard() {
     setDispatchState('loading')
     setDispatchError('')
     try {
-      const { meeting_id } = await startMeeting(platform, nativeId)
+      const { meeting_id } = await startMeeting(platform, nativeId, resolvedPasscode)
       setDispatchState('done')
       setTimeout(() => navigate(`/live/${meeting_id}?native=${encodeURIComponent(nativeId)}`), 800)
     } catch (err) {
@@ -243,7 +277,7 @@ export default function Dashboard() {
           <select
             className="dash-platform-select"
             value={platform}
-            onChange={(e) => setPlatform(e.target.value)}
+            onChange={(e) => { setPlatform(e.target.value); setPasscode(''); setDispatchError('') }}
             disabled={dispatchState !== 'idle'}
             aria-label="Meeting platform"
           >
@@ -255,13 +289,27 @@ export default function Dashboard() {
             <input
               className="dash-join-input"
               type="url"
-              placeholder="Paste meeting ID"
+              placeholder={platform === 'teams' ? 'Paste Teams meeting link' : 'Paste meeting URL'}
               value={url}
               onChange={(e) => { setUrl(e.target.value); setDispatchError('') }}
               onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}
               disabled={dispatchState !== 'idle'}
             />
           </div>
+          {platform === 'teams' && (
+            <div className={`dash-join-input-group ${passcode ? 'dash-join-input-group--filled' : ''}`}>
+              <input
+                className="dash-join-input"
+                type="text"
+                placeholder="Passcode (if not in link)"
+                value={passcode}
+                onChange={(e) => { setPasscode(e.target.value); setDispatchError('') }}
+                onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}
+                disabled={dispatchState !== 'idle'}
+                style={{ width: '160px' }}
+              />
+            </div>
+          )}
           <button
             className={`dash-join-btn ${dispatchState === 'loading' ? 'dash-join-btn--loading' : ''} ${dispatchState === 'done' ? 'dash-join-btn--done' : ''}`}
             onClick={handleDispatch}
