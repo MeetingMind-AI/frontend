@@ -5,19 +5,26 @@ import { meetingToCard } from '../utils'
 import './Dashboard.css'
 
 function parseTeamsUrl(raw) {
-  const passcodeMatch = raw.match(/[?&]p=([^&\s#]+)/i)
+  const trimmed = raw.trim()
+  const passcodeMatch = trimmed.match(/[?&]p=([^&\s#]+)/i)
   const passcode = passcodeMatch ? decodeURIComponent(passcodeMatch[1]) : ''
 
+  if (/^\d{10,20}$/.test(trimmed)) return { nativeId: trimmed, passcode }
+
   // teams.live.com/meetingOptions/meetings/{id}/view (meeting options page)
-  const meetingOptionsMatch = raw.match(/teams\.live\.com\/meetingOptions\/meetings\/(\d{10,15})/i)
+  const meetingOptionsMatch = trimmed.match(/teams\.live\.com\/meetingOptions\/meetings\/(\d{10,20})/i)
   if (meetingOptionsMatch) return { nativeId: meetingOptionsMatch[1], passcode }
 
   // teams.live.com/meet/{id}?p={passcode}
-  const liveMatch = raw.match(/teams\.live\.com\/meet\/(\d{10,15})/i)
+  const liveMatch = trimmed.match(/teams\.live\.com\/meet\/(\d{10,20})/i)
   if (liveMatch) return { nativeId: liveMatch[1], passcode }
 
-  // teams.microsoft.com/l/meetup-join/{thread}/...
-  const msMatch = raw.match(/teams\.microsoft\.com\/l\/meetup-join\/([^\s?#/]+)/i)
+  // *.teams.microsoft.com/meet/{id}?p={passcode}
+  const msShortMatch = trimmed.match(/(?:^|\/\/)(?:[^/]+\.)?teams\.microsoft\.com\/meet\/(\d{10,20})/i)
+  if (msShortMatch) return { nativeId: msShortMatch[1], passcode }
+
+  // *.teams.microsoft.com/l/meetup-join/{thread}/...
+  const msMatch = trimmed.match(/(?:^|\/\/)(?:[^/]+\.)?teams\.microsoft\.com\/l\/meetup-join\/([^\s?#/]+)/i)
   if (msMatch) return { nativeId: decodeURIComponent(msMatch[1]).split('/')[0], passcode }
 
   return null
