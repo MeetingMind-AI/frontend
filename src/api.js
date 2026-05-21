@@ -32,11 +32,13 @@ function wsBase() {
   return `${proto}//${window.location.host}`
 }
 
-export async function startMeeting(platform, nativeId) {
+export async function startMeeting(platform, nativeId, passcode) {
+  const body = { platform, native_id: nativeId }
+  if (passcode) body.passcode = passcode
   const res = await fetch(`${BASE}/api/meetings/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ platform, native_id: nativeId }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
