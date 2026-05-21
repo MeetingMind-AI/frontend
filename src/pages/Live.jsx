@@ -186,7 +186,7 @@ function Live() {
         </div>
 
         <div className="live-header-right">
-          <button className="live-btn" style={{ marginRight: '12px' }} onClick={() => navigate('/')}>
+          <button className="live-end-btn" onClick={() => navigate('/')}>
             Home
           </button>
           <button className="live-end-btn" onClick={async () => {
