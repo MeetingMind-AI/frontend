@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getMeeting, getTranscript, getActions, renameMeeting, updateAction } from '../api'
+import { getMeeting, getTranscript, getActions, renameMeeting, updateAction, getTopics, addMeetingTopic, removeMeetingTopic } from '../api'
 import { parseScrumMaster, formatMeetingTitle, formatDate } from '../utils'
+import MeetingTopicTags from '../components/MeetingTopicTags'
 import './Review.css'
 
 function speakerColor(name) {
@@ -137,6 +138,8 @@ function Review() {
   const [titleDraft, setTitleDraft] = useState('')
   const [proposals, setProposals] = useState({})
   const [summaryTab, setSummaryTab] = useState('general')
+  const [meetingTopics, setMeetingTopics] = useState([])
+  const [teamTopics, setTeamTopics] = useState([])
 
   function proposalToTasks(proposals, meeting) {
     const items = []
@@ -160,6 +163,7 @@ function Review() {
     Promise.all([getMeeting(parsedMeetingId), getTranscript(parsedMeetingId), getActions(parsedMeetingId)])
       .then(([meeting, transcript, actions]) => {
         setMeetingData(meeting)
+        setMeetingTopics(meeting.topics ?? [])
         setChunks(transcript.chunks ?? [])
         setProposals(actions)
         const built = proposalToTasks(actions, meeting.title)
@@ -168,6 +172,28 @@ function Review() {
       .catch((e) => console.warn('[Review] fetch failed:', e))
       .finally(() => setLoading(false))
   }, [parsedMeetingId])
+
+  useEffect(() => {
+    if (!teamId) return
+    getTopics(teamId)
+      .then((data) => setTeamTopics(data.topics ?? []))
+      .catch(() => {})
+  }, [teamId])
+
+  const handleAddTopic = async (topicId, topic) => {
+    setMeetingTopics((prev) => [...prev, topic])
+    try { await addMeetingTopic(parsedMeetingId, topicId) } catch {
+      setMeetingTopics((prev) => prev.filter((t) => t.id !== topicId))
+    }
+  }
+
+  const handleRemoveTopic = async (topicId) => {
+    setMeetingTopics((prev) => prev.filter((t) => t.id !== topicId))
+    try { await removeMeetingTopic(parsedMeetingId, topicId) } catch {
+      const topic = teamTopics.find((t) => t.id === topicId)
+      if (topic) setMeetingTopics((prev) => [...prev, topic])
+    }
+  }
 
   useEffect(() => {
     if (!parsedMeetingId) return
@@ -277,6 +303,17 @@ function Review() {
             <div className="rv-summary-title-row">
               <span className="rv-section-label">AI Meeting Summary</span>
             </div>
+
+            {(meetingTopics.length > 0 || teamTopics.length > 0) && (
+              <div className="rv-summary-tags">
+                <MeetingTopicTags
+                  meetingTopics={meetingTopics}
+                  teamTopics={teamTopics}
+                  onAdd={handleAddTopic}
+                  onRemove={handleRemoveTopic}
+                />
+              </div>
+            )}
 
             {meetingData?.summary && (
               <div className="rv-summary-tabs">

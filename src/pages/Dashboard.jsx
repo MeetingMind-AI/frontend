@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { startMeeting, getMeetings, renameMeeting, deleteMeeting, getTopics, addMeetingTopic, removeMeetingTopic } from '../api'
 import { meetingToCard } from '../utils'
+import MeetingTopicTags from '../components/MeetingTopicTags'
 import './Dashboard.css'
 
 function parseTeamsUrl(raw) {
@@ -49,59 +50,6 @@ function initials(name) {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase()
 }
 
-function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handler(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
-
-  if (teamTopics.length === 0) return null
-
-  return (
-    <div className="dash-topic-add-wrap" ref={ref}>
-      <button className="dash-topic-add-btn" onClick={() => setOpen((v) => !v)} title="Tag meeting">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        Tag
-      </button>
-      {open && (
-        <div className="dash-topic-dropdown">
-          {teamTopics.map((t) => {
-            const isOn = meetingTopics.some((mt) => mt.id === t.id)
-            return (
-              <button
-                key={t.id}
-                className={`dash-topic-option ${isOn ? 'dash-topic-option--on' : ''}`}
-                onClick={() => {
-                  if (isOn) onRemove(t.id)
-                  else onAdd(t.id, t)
-                  setOpen(false)
-                }}
-              >
-                <span className="dash-topic-option-dot" style={{ background: t.color }} />
-                {t.name}
-                {isOn && (
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginLeft: 'auto' }}>
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
 
 function MeetingCard({ meeting, teamId, teamTopics, onRename, onDelete, onAddTopic, onRemoveTopic }) {
   const navigate = useNavigate()
@@ -190,27 +138,12 @@ function MeetingCard({ meeting, teamId, teamTopics, onRename, onDelete, onAddTop
 
       {(meeting.topics.length > 0 || teamTopics.length > 0) && (
         <div className="dash-card-topics">
-          {meeting.topics.map((t) => (
-            <span
-              key={t.id}
-              className="dash-topic-chip"
-              style={{ background: t.color + '22', color: t.color, borderColor: t.color + '55' }}
-            >
-              {t.name}
-              <button
-                className="dash-topic-chip-remove"
-                onClick={() => onRemoveTopic(meeting.id, t.id)}
-                title="Remove tag"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-          <TopicDropdown
-            teamTopics={teamTopics}
+          <MeetingTopicTags
             meetingTopics={meeting.topics}
+            teamTopics={teamTopics}
             onAdd={(topicId, topic) => onAddTopic(meeting.id, topicId, topic)}
             onRemove={(topicId) => onRemoveTopic(meeting.id, topicId)}
+            dropUp
           />
         </div>
       )}
