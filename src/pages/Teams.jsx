@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { getTeams, createTeam } from '../api'
 import { useAuth } from '../contexts/AuthContext'
 import './Teams.css'
 
 export default function Teams() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout } = useAuth()
   const [teams, setTeams] = useState([])
   const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState(location.state?.creating ?? false)
   const [newName, setNewName] = useState('')
   const [createError, setCreateError] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
