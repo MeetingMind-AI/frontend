@@ -186,6 +186,9 @@ function Live() {
         </div>
 
         <div className="live-header-right">
+          <button className="live-end-btn" onClick={() => navigate('/')}>
+            Home
+          </button>
           <button className="live-end-btn" onClick={async () => {
             if (parsedMeetingId) {
               try { await leaveMeeting(parsedMeetingId) } catch {}

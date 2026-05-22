@@ -35,7 +35,7 @@ function Join() {
         <div className="join-hero">
           <h1>Deploy Your AI Meeting Team</h1>
           <p>
-            Paste your Google Meet link and dispatch role-specific AI agents to join,
+            Paste your meet id and dispatch role-specific AI agents to join,
             transcribe, and actively assist your meeting in real time.
           </p>
         </div>
@@ -64,7 +64,6 @@ function Join() {
             <input
               className="join-input"
               type="url"
-              placeholder="https://meet.google.com/abc-defg-hij"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}

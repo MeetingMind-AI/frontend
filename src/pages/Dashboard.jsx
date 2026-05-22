@@ -4,6 +4,32 @@ import { startMeeting, getMeetings, renameMeeting, deleteMeeting, getTopics, add
 import { meetingToCard } from '../utils'
 import './Dashboard.css'
 
+function parseTeamsUrl(raw) {
+  const trimmed = raw.trim()
+  const passcodeMatch = trimmed.match(/[?&]p=([^&\s#]+)/i)
+  const passcode = passcodeMatch ? decodeURIComponent(passcodeMatch[1]) : ''
+
+  if (/^\d{10,20}$/.test(trimmed)) return { nativeId: trimmed, passcode }
+
+  // teams.live.com/meetingOptions/meetings/{id}/view (meeting options page)
+  const meetingOptionsMatch = trimmed.match(/teams\.live\.com\/meetingOptions\/meetings\/(\d{10,20})/i)
+  if (meetingOptionsMatch) return { nativeId: meetingOptionsMatch[1], passcode }
+
+  // teams.live.com/meet/{id}?p={passcode}
+  const liveMatch = trimmed.match(/teams\.live\.com\/meet\/(\d{10,20})/i)
+  if (liveMatch) return { nativeId: liveMatch[1], passcode }
+
+  // *.teams.microsoft.com/meet/{id}?p={passcode}
+  const msShortMatch = trimmed.match(/(?:^|\/\/)(?:[^/]+\.)?teams\.microsoft\.com\/meet\/(\d{10,20})/i)
+  if (msShortMatch) return { nativeId: msShortMatch[1], passcode }
+
+  // *.teams.microsoft.com/l/meetup-join/{thread}/...
+  const msMatch = trimmed.match(/(?:^|\/\/)(?:[^/]+\.)?teams\.microsoft\.com\/l\/meetup-join\/([^\s?#/]+)/i)
+  if (msMatch) return { nativeId: decodeURIComponent(msMatch[1]).split('/')[0], passcode }
+
+  return null
+}
+
 function extractNativeId(url) {
   try {
     return new URL(url).pathname.split('/').filter(Boolean).pop() || null
@@ -254,7 +280,9 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
   const [welcomeTeam, setWelcomeTeam] = useState(location.state?.welcome ?? null)
+  const [platform, setPlatform] = useState('google_meet')
   const [url, setUrl] = useState('')
+  const [passcode, setPasscode] = useState('')
   const [dispatchState, setDispatchState] = useState('idle')
   const [dispatchError, setDispatchError] = useState('')
   const [filter, setFilter] = useState('all')
@@ -273,15 +301,29 @@ export default function Dashboard() {
 
   const handleDispatch = async () => {
     if (!url.trim() || dispatchState !== 'idle') return
-    const nativeId = extractNativeId(url.trim())
+
+    let nativeId, resolvedPasscode
+    if (platform === 'teams') {
+      const parsed = parseTeamsUrl(url.trim())
+      if (!parsed) {
+        setDispatchError('Could not parse Teams URL. Paste the full meeting link.')
+        return
+      }
+      nativeId = parsed.nativeId
+      resolvedPasscode = passcode.trim() || parsed.passcode
+    } else {
+      nativeId = extractNativeId(url.trim())
+      resolvedPasscode = ''
+    }
+
     if (!nativeId) {
-      setDispatchError('Invalid Google Meet URL')
+      setDispatchError('Invalid meeting URL')
       return
     }
     setDispatchState('loading')
     setDispatchError('')
     try {
-      const { meeting_id } = await startMeeting('google_meet', nativeId, parseInt(teamId, 10))
+      const { meeting_id } = await startMeeting(platform, nativeId, resolvedPasscode)
       setDispatchState('done')
       setTimeout(() => navigate(`/teams/${teamId}/live/${meeting_id}?native=${encodeURIComponent(nativeId)}`), 800)
     } catch (err) {
@@ -364,20 +406,45 @@ export default function Dashboard() {
             </svg>
             Start a New Meeting
           </div>
-          <p className="dash-join-box-sub">Dispatch AI agents to an active Google Meet session</p>
+          <p className="dash-join-box-sub">Dispatch AI agents to an active meeting session</p>
         </div>
         <div className="dash-join-input-row">
+          <select
+            className="dash-platform-select"
+            value={platform}
+            onChange={(e) => { setPlatform(e.target.value); setPasscode(''); setDispatchError('') }}
+            disabled={dispatchState !== 'idle'}
+            aria-label="Meeting platform"
+          >
+            <option value="google_meet">Google Meet</option>
+            <option value="zoom">Zoom</option>
+            <option value="teams">Microsoft Teams</option>
+          </select>
           <div className={`dash-join-input-group ${url ? 'dash-join-input-group--filled' : ''}`}>
             <input
               className="dash-join-input"
               type="url"
-              placeholder="https://meet.google.com/abc-defg-hij"
+              placeholder={platform === 'teams' ? 'Paste Teams meeting link' : 'Paste meeting URL'}
               value={url}
               onChange={(e) => { setUrl(e.target.value); setDispatchError('') }}
               onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}
               disabled={dispatchState !== 'idle'}
             />
           </div>
+          {platform === 'teams' && (
+            <div className={`dash-join-input-group ${passcode ? 'dash-join-input-group--filled' : ''}`}>
+              <input
+                className="dash-join-input"
+                type="text"
+                placeholder="Passcode (if not in link)"
+                value={passcode}
+                onChange={(e) => { setPasscode(e.target.value); setDispatchError('') }}
+                onKeyDown={(e) => e.key === 'Enter' && handleDispatch()}
+                disabled={dispatchState !== 'idle'}
+                style={{ width: '160px' }}
+              />
+            </div>
+          )}
           <button
             className={`dash-join-btn ${dispatchState === 'loading' ? 'dash-join-btn--loading' : ''} ${dispatchState === 'done' ? 'dash-join-btn--done' : ''}`}
             onClick={handleDispatch}
