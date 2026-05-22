@@ -85,7 +85,18 @@ export default function Settings() {
   }
 
   const handleCopyInvite = () => {
-    navigator.clipboard.writeText(inviteUrl)
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(inviteUrl)
+    } else {
+      const el = document.createElement('textarea')
+      el.value = inviteUrl
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+    }
     setInviteCopied(true)
     setTimeout(() => setInviteCopied(false), 2000)
   }
