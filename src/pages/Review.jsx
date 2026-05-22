@@ -125,7 +125,7 @@ function ApprovedCard({ task, onUndo }) {
 
 function Review() {
   const navigate = useNavigate()
-  const { meetingId } = useParams()
+  const { teamId, meetingId } = useParams()
   const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
 
   const [tasks, setTasks] = useState([])
@@ -267,7 +267,7 @@ function Review() {
           </div>
         </div>
         <div className="rv-header-right">
-          <button className="rv-btn rv-btn--ghost" onClick={() => navigate('/')}>← Dashboard</button>
+          <button className="rv-btn rv-btn--ghost" onClick={() => navigate(`/teams/${teamId}`)}>← Dashboard</button>
         </div>
       </header>
 

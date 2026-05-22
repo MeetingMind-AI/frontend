@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { startMeeting, getMeetings, renameMeeting, deleteMeeting } from '../api'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { startMeeting, getMeetings, renameMeeting, deleteMeeting, getTopics, addMeetingTopic, removeMeetingTopic } from '../api'
 import { meetingToCard } from '../utils'
 import './Dashboard.css'
 
@@ -49,7 +49,61 @@ function initials(name) {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase()
 }
 
-function MeetingCard({ meeting, onRename, onDelete }) {
+function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handler(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  if (teamTopics.length === 0) return null
+
+  return (
+    <div className="dash-topic-add-wrap" ref={ref}>
+      <button className="dash-topic-add-btn" onClick={() => setOpen((v) => !v)} title="Tag meeting">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Tag
+      </button>
+      {open && (
+        <div className="dash-topic-dropdown">
+          {teamTopics.map((t) => {
+            const isOn = meetingTopics.some((mt) => mt.id === t.id)
+            return (
+              <button
+                key={t.id}
+                className={`dash-topic-option ${isOn ? 'dash-topic-option--on' : ''}`}
+                onClick={() => {
+                  if (isOn) onRemove(t.id)
+                  else onAdd(t.id, t)
+                  setOpen(false)
+                }}
+              >
+                <span className="dash-topic-option-dot" style={{ background: t.color }} />
+                {t.name}
+                {isOn && (
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginLeft: 'auto' }}>
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MeetingCard({ meeting, teamId, teamTopics, onRename, onDelete, onAddTopic, onRemoveTopic }) {
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(meeting.title)
@@ -134,6 +188,33 @@ function MeetingCard({ meeting, onRename, onDelete }) {
         </span>
       </div>
 
+      {(meeting.topics.length > 0 || teamTopics.length > 0) && (
+        <div className="dash-card-topics">
+          {meeting.topics.map((t) => (
+            <span
+              key={t.id}
+              className="dash-topic-chip"
+              style={{ background: t.color + '22', color: t.color, borderColor: t.color + '55' }}
+            >
+              {t.name}
+              <button
+                className="dash-topic-chip-remove"
+                onClick={() => onRemoveTopic(meeting.id, t.id)}
+                title="Remove tag"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <TopicDropdown
+            teamTopics={teamTopics}
+            meetingTopics={meeting.topics}
+            onAdd={(topicId, topic) => onAddTopic(meeting.id, topicId, topic)}
+            onRemove={(topicId) => onRemoveTopic(meeting.id, topicId)}
+          />
+        </div>
+      )}
+
       <div className="dash-card-stats">
         <div className="dash-stat">
           <span className="dash-stat-num">{meeting.actionItemCount}</span>
@@ -167,7 +248,10 @@ function MeetingCard({ meeting, onRename, onDelete }) {
         )}
         <div className="dash-card-actions">
           {!meeting.reviewed && (
-            <button className="dash-card-cta dash-card-cta--live" onClick={() => navigate(`/live/${meeting.id}`)}>
+            <button
+              className="dash-card-cta dash-card-cta--live"
+              onClick={() => navigate(`/teams/${teamId}/live/${meeting.id}`)}
+            >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <polygon points="10 8 16 12 10 16" fill="currentColor" stroke="none" />
@@ -177,7 +261,7 @@ function MeetingCard({ meeting, onRename, onDelete }) {
           )}
           <button
             className={`dash-card-cta ${!meeting.reviewed ? 'dash-card-cta--pending' : ''}`}
-            onClick={() => navigate(`/review/${meeting.id}`)}
+            onClick={() => navigate(`/teams/${teamId}/review/${meeting.id}`)}
           >
             View Detail
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -192,7 +276,10 @@ function MeetingCard({ meeting, onRename, onDelete }) {
 }
 
 export default function Dashboard() {
+  const { teamId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [welcomeTeam, setWelcomeTeam] = useState(location.state?.welcome ?? null)
   const [platform, setPlatform] = useState('google_meet')
   const [url, setUrl] = useState('')
   const [passcode, setPasscode] = useState('')
@@ -200,14 +287,17 @@ export default function Dashboard() {
   const [dispatchError, setDispatchError] = useState('')
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
-
   const [meetings, setMeetings] = useState([])
+  const [teamTopics, setTeamTopics] = useState([])
 
   useEffect(() => {
-    getMeetings()
+    getMeetings(teamId)
       .then((data) => setMeetings((data.meetings ?? []).map(meetingToCard)))
       .catch((e) => console.warn('[Dashboard] fetch failed:', e))
-  }, [])
+    getTopics(teamId)
+      .then((data) => setTeamTopics(data.topics ?? []))
+      .catch(() => {})
+  }, [teamId])
 
   const handleDispatch = async () => {
     if (!url.trim() || dispatchState !== 'idle') return
@@ -235,7 +325,7 @@ export default function Dashboard() {
     try {
       const { meeting_id } = await startMeeting(platform, nativeId, resolvedPasscode)
       setDispatchState('done')
-      setTimeout(() => navigate(`/live/${meeting_id}?native=${encodeURIComponent(nativeId)}`), 800)
+      setTimeout(() => navigate(`/teams/${teamId}/live/${meeting_id}?native=${encodeURIComponent(nativeId)}`), 800)
     } catch (err) {
       setDispatchState('idle')
       setDispatchError(err.message)
@@ -250,6 +340,28 @@ export default function Dashboard() {
   const handleDelete = async (id) => {
     await deleteMeeting(id)
     setMeetings((prev) => prev.filter((m) => m.id !== id))
+  }
+
+  const handleAddTopic = async (meetingId, topicId, topic) => {
+    try {
+      await addMeetingTopic(meetingId, topicId)
+      setMeetings((prev) => prev.map((m) =>
+        m.id === meetingId ? { ...m, topics: [...m.topics, topic] } : m
+      ))
+    } catch (err) {
+      console.warn('[Dashboard] add topic failed:', err)
+    }
+  }
+
+  const handleRemoveTopic = async (meetingId, topicId) => {
+    try {
+      await removeMeetingTopic(meetingId, topicId)
+      setMeetings((prev) => prev.map((m) =>
+        m.id === meetingId ? { ...m, topics: m.topics.filter((t) => t.id !== topicId) } : m
+      ))
+    } catch (err) {
+      console.warn('[Dashboard] remove topic failed:', err)
+    }
   }
 
   const filtered = meetings
@@ -268,6 +380,22 @@ export default function Dashboard() {
           <p className="dash-page-subtitle">Overview of your meetings and action items</p>
         </div>
       </div>
+
+      {welcomeTeam && (
+        <div className="dash-welcome-banner">
+          <span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Welcome to <strong>{welcomeTeam}</strong>! You have joined the team.
+          </span>
+          <button className="dash-welcome-close" onClick={() => setWelcomeTeam(null)}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       <div className="dash-join-box">
         <div className="dash-join-box-left">
@@ -400,7 +528,16 @@ export default function Dashboard() {
         {filtered.length > 0 ? (
           <div className="dash-meetings-grid">
             {filtered.map((m) => (
-              <MeetingCard key={m.id} meeting={m} onRename={handleRename} onDelete={handleDelete} />
+              <MeetingCard
+                key={m.id}
+                meeting={m}
+                teamId={teamId}
+                teamTopics={teamTopics}
+                onRename={handleRename}
+                onDelete={handleDelete}
+                onAddTopic={handleAddTopic}
+                onRemoveTopic={handleRemoveTopic}
+              />
             ))}
           </div>
         ) : (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { getAllActions } from '../api'
 import { buildScheduleItems } from '../utils'
 import './GlobalKanban.css'
@@ -28,13 +29,14 @@ function ScheduleRow({ item }) {
 }
 
 export default function GlobalSchedule() {
+  const { teamId } = useParams()
   const [tasks, setTasks] = useState([])
 
   useEffect(() => {
-    getAllActions()
+    getAllActions(teamId)
       .then((data) => setTasks(buildScheduleItems(data)))
       .catch(() => {})
-  }, [])
+  }, [teamId])
 
   return (
     <div className="gk-page">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { getAllActions } from '../api'
 import { buildParkingLotItems } from '../utils'
 import './GlobalParkingLot.css'
@@ -18,13 +19,14 @@ function ParkingCard({ item }) {
 }
 
 export default function GlobalParkingLot() {
+  const { teamId } = useParams()
   const [items, setItems] = useState([])
 
   useEffect(() => {
-    getAllActions()
+    getAllActions(teamId)
       .then((data) => setItems(buildParkingLotItems(data)))
       .catch(() => {})
-  }, [])
+  }, [teamId])
 
   return (
     <div className="pl-page">

@@ -1,192 +1,249 @@
-// HTTP requests use relative paths — Nginx proxies /api/* to the backend.
-// VITE_API_URL is kept as an escape hatch for local dev without Docker.
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
-// FastAPI validation errors return detail as an array of objects.
-// The backend sometimes double-encodes the detail as a JSON string —
-// unwrap it if so before extracting the human-readable message.
-function extractError(body, status) {
-  let detail = body.detail
-  if (!detail) return `HTTP ${status}`
-
-  // Unwrap double-encoded JSON string: detail = '{"detail":[...]}'
-  if (typeof detail === 'string') {
-    try {
-      const inner = JSON.parse(detail)
-      detail = inner.detail ?? inner
-    } catch {}
+  function wsBase() {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${proto}//${window.location.host}`
   }
 
-  if (Array.isArray(detail)) {
-    const msg = detail[0]?.msg ?? ''
-    return msg.replace(/^value error,\s*/i, '')
-  }
-
-  return typeof detail === 'string' ? detail : `HTTP ${status}`
-}
-
-// Derive the WebSocket base from the current page origin so it also goes
-// through Nginx (same host, same port, no CORS).
-function wsBase() {
-  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${proto}//${window.location.host}`
-}
-
-export async function startMeeting(platform, nativeId, passcode) {
-  const body = { platform, native_id: nativeId }
-  if (passcode) body.passcode = passcode
-  const res = await fetch(`${BASE}/api/meetings/start`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json() // { meeting_id: number }
-}
-
-export async function leaveMeeting(meetingId) {
-  const res = await fetch(`${BASE}/api/meetings/${meetingId}/leave`, {
-    method: 'POST',
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json()
-}
-
-// Opens a persistent WebSocket to the backend ingest endpoint.
-// Send transcript chunks with .send(speaker, text).
-// Calls onInsight({ role, text }) for each non-IGNORE Ollama summary received.
-// Returns { send, close }.
-export async function getMeetings() {
-  const res = await fetch(`${BASE}/api/meetings`)
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json() // { meetings: [...] }
-}
-
-export async function getMeeting(meetingId) {
-  const res = await fetch(`${BASE}/api/meetings/${meetingId}`)
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json() // { id, title, status, summary, created_at }
-}
-
-export async function getTranscript(meetingId) {
-  const res = await fetch(`${BASE}/api/meetings/${meetingId}/transcript`)
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json() // { meeting_id, status, chunks: [{id, speaker, text, timestamp}] }
-}
-
-export async function explainMeeting(meetingId, mode, lastXMinutes = null) {
-  const payload = { mode }
-  if (lastXMinutes !== null) {
-    payload.last_x_minutes = lastXMinutes
-  }
-  const res = await fetch(`${BASE}/api/meetings/${meetingId}/explain`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json()
-}
-
-export async function getActions(meetingId) {
-  const res = await fetch(`${BASE}/api/meetings/${meetingId}/actions`)
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json() // { parking_lot: { pending: [...], accepted: [...], rejected: [...] }, to_do: {...}, to_schedule: {...} }
-}
-
-export async function getAllActions() {
-  const res = await fetch(`${BASE}/api/actions`)
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json()
-}
-
-export async function updateAction(meetingId, actionId, status, content) {
-  const body = { status }
-  if (content !== undefined) body.content = content
-  const res = await fetch(`${BASE}/api/meetings/${meetingId}/actions/${actionId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json() // { ok: true, id, status } or { ok: true, deleted }
-}
-
-export async function renameMeeting(meetingId, title) {
-  const res = await fetch(`${BASE}/api/meetings/${meetingId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json()
-}
-
-export async function deleteMeeting(meetingId) {
-  const res = await fetch(`${BASE}/api/meetings/${meetingId}`, { method: 'DELETE' })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(extractError(body, res.status))
-  }
-  return res.json()
-}
-
-export function openInsightSocket(meetingId, { onChunk, onChunksSnapshot, onInsight, onProposal, onOpen, onClose } = {}) {
-  const ws = new WebSocket(`${wsBase()}/api/ws/ingest/${meetingId}`)
-
-  ws.onopen = () => onOpen?.()
-  ws.onclose = () => onClose?.()
-  ws.onerror = (e) => console.error('[WS] error', e)
-  ws.onmessage = ({ data }) => {
-    try {
-      const msg = JSON.parse(data)
-      const event = msg.event
-      const msgData = msg.data
-      if (event === 'transcript_snapshot') {
-        onChunksSnapshot?.(msgData.chunks ?? [])
-      } else if (event === 'transcript_chunk') {
-        onChunk?.(msgData)
-      } else if (event === 'insight') {
-        onInsight?.({ role: msgData.role, text: msgData.text })
-      } else if (event === 'proposal') {
-        onProposal?.(msgData)
-      }
-    } catch (e) {
-      console.warn('[WS] failed to parse message', e)
+  function extractError(body, status) {
+    let detail = body.detail
+    if (!detail) return `HTTP ${status}`
+    if (typeof detail === 'string') {
+      try {
+        const inner = JSON.parse(detail)
+        detail = inner.detail ?? inner
+      } catch {}
     }
+    if (Array.isArray(detail)) {
+      const msg = detail[0]?.msg ?? ''
+      return msg.replace(/^value error,\s*/i, '')
+    }
+    return typeof detail === 'string' ? detail : `HTTP ${status}`
   }
 
-  return {
-    close() { ws.close() },
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(`${BASE}${path}`, {
+      credentials: 'include',
+      ...options,
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(extractError(body, res.status))
+    }
+    return res.json()
   }
-}
+
+  // ── Auth ─────────────────────────────────────────────────────────────────────
+
+  export async function getMe() {
+    return apiFetch('/api/auth/me')
+  }
+
+  export async function login(email, password) {
+    return apiFetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+  }
+
+  export async function signup(email, name, password, confirmPassword, photoB64 = null) {
+    return apiFetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        name,
+        password,
+        confirm_password: confirmPassword,
+        ...(photoB64 ? { photo_b64: photoB64 } : {}),
+      }),
+    })
+  }
+
+  export async function logout() {
+    return apiFetch('/api/auth/logout', { method: 'POST' })
+  }
+
+  // ── Teams ─────────────────────────────────────────────────────────────────────
+
+  export async function getTeams() {
+    return apiFetch('/api/teams')
+  }
+
+  export async function createTeam(name) {
+    return apiFetch('/api/teams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+  }
+
+  export async function getTeam(teamId) {
+    return apiFetch(`/api/teams/${teamId}`)
+  }
+
+  export async function updateTeam(teamId, name) {
+    return apiFetch(`/api/teams/${teamId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+  }
+
+  export async function leaveTeam(teamId) {
+    return apiFetch(`/api/teams/${teamId}/leave`, { method: 'POST' })
+  }
+
+  export async function getInviteLink(teamId) {
+    return apiFetch(`/api/teams/${teamId}/invite`)
+  }
+
+  export async function joinTeam(inviteToken) {
+    return apiFetch(`/api/teams/join/${inviteToken}`, { method: 'POST' })
+  }
+
+  export async function getMembers(teamId) {
+    return apiFetch(`/api/teams/${teamId}/members`)
+  }
+
+  export async function kickMember(teamId, userId) {
+    return apiFetch(`/api/teams/${teamId}/members/${userId}`, { method: 'DELETE' })
+  }
+
+  // ── Topics ────────────────────────────────────────────────────────────────────
+
+  export async function getTopics(teamId) {
+    return apiFetch(`/api/teams/${teamId}/topics`)
+  }
+
+  export async function createTopic(teamId, name, color) {
+    return apiFetch(`/api/teams/${teamId}/topics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, color }),
+    })
+  }
+
+  export async function updateTopic(teamId, topicId, name, color) {
+    return apiFetch(`/api/teams/${teamId}/topics/${topicId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, color }),
+    })
+  }
+
+  export async function deleteTopic(teamId, topicId) {
+    return apiFetch(`/api/teams/${teamId}/topics/${topicId}`, { method: 'DELETE' })
+  }
+
+  export async function addMeetingTopic(meetingId, topicId) {
+    return apiFetch(`/api/meetings/${meetingId}/topics/${topicId}`, { method: 'POST' })
+  }
+
+  export async function removeMeetingTopic(meetingId, topicId) {
+    return apiFetch(`/api/meetings/${meetingId}/topics/${topicId}`, { method: 'DELETE' })
+  }
+
+  // ── Meetings ──────────────────────────────────────────────────────────────────
+
+  export async function startMeeting(platform, nativeId, teamId = null, passcode = '') {
+    return apiFetch('/api/meetings/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform,
+        native_id: nativeId,
+        team_id: teamId,
+        ...(passcode ? { passcode } : {}),
+      }),
+    })
+  }
+
+  export async function leaveMeeting(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}/leave`, { method: 'POST' })
+  }
+
+  export async function getMeetings(teamId = null) {
+    const qs = teamId != null ? `?team_id=${teamId}` : ''
+    return apiFetch(`/api/meetings${qs}`)
+  }
+
+  export async function getMeeting(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}`)
+  }
+
+  export async function getTranscript(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}/transcript`)
+  }
+
+  export async function explainMeeting(meetingId, mode, lastXMinutes = null) {
+    const payload = { mode }
+    if (lastXMinutes !== null) payload.last_x_minutes = lastXMinutes
+    return apiFetch(`/api/meetings/${meetingId}/explain`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  }
+
+  export async function getActions(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}/actions`)
+  }
+
+  export async function getAllActions(teamId = null) {
+    const qs = teamId != null ? `?team_id=${teamId}` : ''
+    return apiFetch(`/api/actions${qs}`)
+  }
+
+  export async function updateAction(meetingId, actionId, status, content) {
+    const body = { status }
+    if (content !== undefined) body.content = content
+    return apiFetch(`/api/meetings/${meetingId}/actions/${actionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  }
+
+  export async function renameMeeting(meetingId, title) {
+    return apiFetch(`/api/meetings/${meetingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    })
+  }
+
+  export async function deleteMeeting(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}`, { method: 'DELETE' })
+  }
+
+  // ── WebSocket ─────────────────────────────────────────────────────────────────
+
+  export function openInsightSocket(meetingId, { onChunk, onChunksSnapshot, onInsight, onProposal, onOpen, onClose } = {}) {
+    const ws = new WebSocket(`${wsBase()}/api/ws/ingest/${meetingId}`)
+
+    ws.onopen = () => onOpen?.()
+    ws.onclose = () => onClose?.()
+    ws.onerror = (e) => console.error('[WS] error', e)
+    ws.onmessage = ({ data }) => {
+      try {
+        const msg = JSON.parse(data)
+        const event = msg.event
+        const msgData = msg.data
+        if (event === 'transcript_snapshot') {
+          onChunksSnapshot?.(msgData.chunks ?? [])
+        } else if (event === 'transcript_chunk') {
+          onChunk?.(msgData)
+        } else if (event === 'insight') {
+          onInsight?.({ role: msgData.role, text: msgData.text })
+        } else if (event === 'proposal') {
+          onProposal?.(msgData)
+        }
+      } catch (e) {
+        console.warn('[WS] failed to parse message', e)
+      }
+    }
+
+    return { close() { ws.close() } }
+  }

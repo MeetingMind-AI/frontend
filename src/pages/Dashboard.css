@@ -602,6 +602,149 @@
   color: var(--text-1);
 }
 
+/* ── Welcome banner ── */
+.dash-welcome-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.dash-welcome-banner strong {
+  font-weight: 700;
+}
+
+.dash-welcome-banner span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-welcome-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.dash-welcome-close:hover {
+  opacity: 1;
+}
+
+/* ── Topic chips on meeting cards ── */
+.dash-card-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.dash-topic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+}
+
+.dash-topic-chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  color: inherit;
+  opacity: 0.6;
+  margin-left: 1px;
+}
+
+.dash-topic-chip-remove:hover {
+  opacity: 1;
+}
+
+.dash-topic-add-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.dash-topic-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.dash-topic-add-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dash-topic-dropdown {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 50;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.dash-topic-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text-1);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.dash-topic-option:hover {
+  background: var(--bg-2);
+}
+
+.dash-topic-option--on {
+  color: var(--accent);
+}
+
+.dash-topic-option-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 @media (max-width: 900px) {
   .dash-join-box {
     flex-direction: column;
