@@ -323,7 +323,7 @@ export default function Dashboard() {
     setDispatchState('loading')
     setDispatchError('')
     try {
-      const { meeting_id } = await startMeeting(platform, nativeId, resolvedPasscode)
+      const { meeting_id } = await startMeeting(platform, nativeId, teamId, resolvedPasscode)
       setDispatchState('done')
       setTimeout(() => navigate(`/teams/${teamId}/live/${meeting_id}?native=${encodeURIComponent(nativeId)}`), 800)
     } catch (err) {
