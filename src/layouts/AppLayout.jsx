@@ -22,6 +22,7 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const [recentMeetings, setRecentMeetings] = useState([])
   const [team, setTeam] = useState(null)
+  const [teamNotFound, setTeamNotFound] = useState(false)
   const [allTeams, setAllTeams] = useState([])
   const [showUserMenu, setShowUserMenu] = useState(false)
   const userMenuRef = useRef(null)
@@ -33,9 +34,10 @@ export default function AppLayout() {
   }, [teamId])
 
   useEffect(() => {
+    setTeamNotFound(false)
     getTeam(teamId)
       .then(setTeam)
-      .catch(() => {})
+      .catch(() => setTeamNotFound(true))
   }, [teamId])
 
   useEffect(() => {
@@ -61,6 +63,26 @@ export default function AppLayout() {
   const handleLogout = async () => {
     await logout()
     navigate('/login')
+  }
+
+  if (teamNotFound) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '12px', color: 'var(--text-2)' }}>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>404 — Team not found</h2>
+        <p style={{ fontSize: '14px', color: 'var(--text-3)', margin: 0 }}>This team doesn't exist or you don't have access to it.</p>
+        <button
+          onClick={() => navigate('/teams')}
+          style={{ marginTop: '8px', padding: '8px 20px', borderRadius: 'var(--radius)', background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}
+        >
+          Back to my teams
+        </button>
+      </div>
+    )
   }
 
   return (
