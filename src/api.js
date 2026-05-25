@@ -137,6 +137,22 @@ const BASE = import.meta.env.VITE_API_URL ?? ''
     return apiFetch(`/api/teams/${teamId}/topics/${topicId}`, { method: 'DELETE' })
   }
 
+  export async function getTeamPrompts(teamId) {
+    return apiFetch(`/api/teams/${teamId}/prompts`)
+  }
+
+  export async function updateTeamPrompt(teamId, promptKey, promptText) {
+    return apiFetch(`/api/teams/${teamId}/prompts/${promptKey}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt_text: promptText }),
+    })
+  }
+
+  export async function resetTeamPrompt(teamId, promptKey) {
+    return apiFetch(`/api/teams/${teamId}/prompts/${promptKey}`, { method: 'DELETE' })
+  }
+
   export async function addMeetingTopic(meetingId, topicId) {
     return apiFetch(`/api/meetings/${meetingId}/topics/${topicId}`, { method: 'POST' })
   }

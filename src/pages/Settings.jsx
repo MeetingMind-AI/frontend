@@ -4,6 +4,7 @@ import {
   getTeam, updateTeam, getMembers, kickMember,
   getTopics, createTopic, updateTopic, deleteTopic,
   getInviteLink, leaveTeam,
+  getTeamPrompts, updateTeamPrompt, resetTeamPrompt,
 } from '../api'
 import { useAuth } from '../contexts/AuthContext'
 import './Settings.css'
@@ -16,6 +17,7 @@ const TABS = [
   { key: 'general', label: 'General' },
   { key: 'members', label: 'Members' },
   { key: 'topics', label: 'Topics' },
+  { key: 'prompts', label: 'AI Prompts', ownerOnly: true },
   { key: 'invite', label: 'Invite Link' },
   { key: 'leave', label: 'Leave Team' },
 ]
@@ -41,6 +43,11 @@ export default function Settings() {
   const [topicError, setTopicError] = useState('')
   const [topicLoading, setTopicLoading] = useState(false)
   const [editingTopic, setEditingTopic] = useState(null)
+
+  const [prompts, setPrompts] = useState([])
+  const [promptDrafts, setPromptDrafts] = useState({})
+  const [promptSaving, setPromptSaving] = useState({})
+  const [promptsLoaded, setPromptsLoaded] = useState(false)
 
   useEffect(() => {
     getTeam(teamId).then((t) => { setTeam(t); setTeamName(t.name) }).catch(() => {})
@@ -150,6 +157,45 @@ export default function Settings() {
     }
   }
 
+  const loadPrompts = async () => {
+    try {
+      const data = await getTeamPrompts(teamId)
+      setPrompts(data.prompts)
+      const drafts = {}
+      data.prompts.forEach((p) => { drafts[p.key] = p.text })
+      setPromptDrafts(drafts)
+      setPromptsLoaded(true)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => {
+    if (tab === 'prompts' && !promptsLoaded) loadPrompts()
+  }, [tab])
+
+  const handleSavePrompt = async (key) => {
+    setPromptSaving((s) => ({ ...s, [key]: true }))
+    try {
+      await updateTeamPrompt(teamId, key, promptDrafts[key])
+      setPrompts((prev) => prev.map((p) => p.key === key ? { ...p, text: promptDrafts[key], is_custom: true } : p))
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setPromptSaving((s) => ({ ...s, [key]: false }))
+    }
+  }
+
+  const handleResetPrompt = async (key) => {
+    if (!confirm('Reset this prompt to the default?')) return
+    try {
+      await resetTeamPrompt(teamId, key)
+      await loadPrompts()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
   return (
     <div className="settings-page">
       <div className="settings-top">
@@ -158,7 +204,7 @@ export default function Settings() {
 
       <div className="settings-body">
         <aside className="settings-sidebar">
-          {TABS.map((t) => (
+          {TABS.filter((t) => !t.ownerOnly || isOwner).map((t) => (
             <button
               key={t.key}
               className={`settings-tab ${tab === t.key ? 'settings-tab--active' : ''} ${t.key === 'leave' ? 'settings-tab--danger' : ''}`}
@@ -296,6 +342,46 @@ export default function Settings() {
                         )}
                       </>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === 'prompts' && (
+            <div>
+              <h2 className="settings-section-title">AI Prompts</h2>
+              <p className="settings-description">Customize the prompts sent to the AI for this team. Changes apply to all future meetings.</p>
+              <div className="settings-prompt-list">
+                {prompts.map((p) => (
+                  <div key={p.key} className="settings-prompt-card">
+                    <div className="settings-prompt-header">
+                      <span className="settings-prompt-label">{p.label}</span>
+                      {p.is_custom && <span className="settings-prompt-badge">Custom</span>}
+                    </div>
+                    <textarea
+                      className="settings-prompt-textarea"
+                      value={promptDrafts[p.key] ?? p.text}
+                      onChange={(e) => setPromptDrafts((d) => ({ ...d, [p.key]: e.target.value }))}
+                      rows={8}
+                    />
+                    <div className="settings-prompt-actions">
+                      <button
+                        className="settings-save-btn settings-save-btn--sm"
+                        disabled={promptSaving[p.key] || !promptDrafts[p.key]?.trim()}
+                        onClick={() => handleSavePrompt(p.key)}
+                      >
+                        {promptSaving[p.key] ? 'Saving…' : 'Save'}
+                      </button>
+                      {p.is_custom && (
+                        <button
+                          className="settings-cancel-btn"
+                          onClick={() => handleResetPrompt(p.key)}
+                        >
+                          Reset to default
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
