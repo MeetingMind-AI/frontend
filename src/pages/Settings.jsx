@@ -13,6 +13,39 @@ function initials(name) {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
+const PROMPT_GROUPS = [
+  {
+    key: 'realtime',
+    label: 'Real-time Monitoring',
+    description: 'Runs on every utterance during a live meeting.',
+    keys: ['realtime_scrum_master', 'realtime_user'],
+  },
+  {
+    key: 'final_report',
+    label: 'Final Report — Initial Analysis',
+    description: 'Tech Lead and PM analyse the full transcript in parallel when the meeting ends.',
+    keys: ['final_tech_lead', 'final_product_manager', 'initial_analysis_user'],
+  },
+  {
+    key: 'discussion',
+    label: 'Cross-functional Discussion',
+    description: 'Tech Lead ↔ PM debate rounds that run after the initial analysis.',
+    keys: ['discussion_tech_lead', 'discussion_product_manager', 'discussion_user'],
+  },
+  {
+    key: 'synthesis',
+    label: 'Final Synthesis',
+    description: 'Scrum Master synthesises all findings into the master report.',
+    keys: ['synthesis', 'synthesis_user'],
+  },
+  {
+    key: 'instant_clarity',
+    label: 'Instant Clarity',
+    description: 'Triggered by the Explain Technical / Explain Business buttons during a live meeting.',
+    keys: ['instant_clarity_technical', 'instant_clarity_business', 'instant_clarity_user'],
+  },
+]
+
 const TABS = [
   { key: 'general', label: 'General' },
   { key: 'members', label: 'Members' },
@@ -48,6 +81,11 @@ export default function Settings() {
   const [promptDrafts, setPromptDrafts] = useState({})
   const [promptSaving, setPromptSaving] = useState({})
   const [promptsLoaded, setPromptsLoaded] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState(
+    () => Object.fromEntries(PROMPT_GROUPS.map((g) => [g.key, true]))
+  )
+
+  const toggleGroup = (key) => setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }))
 
   useEffect(() => {
     getTeam(teamId).then((t) => { setTeam(t); setTeamName(t.name) }).catch(() => {})
@@ -353,37 +391,74 @@ export default function Settings() {
               <h2 className="settings-section-title">AI Prompts</h2>
               <p className="settings-description">Customize the prompts sent to the AI for this team. Changes apply to all future meetings.</p>
               <div className="settings-prompt-list">
-                {prompts.map((p) => (
-                  <div key={p.key} className="settings-prompt-card">
-                    <div className="settings-prompt-header">
-                      <span className="settings-prompt-label">{p.label}</span>
-                      {p.is_custom && <span className="settings-prompt-badge">Custom</span>}
-                    </div>
-                    <textarea
-                      className="settings-prompt-textarea"
-                      value={promptDrafts[p.key] ?? p.text}
-                      onChange={(e) => setPromptDrafts((d) => ({ ...d, [p.key]: e.target.value }))}
-                      rows={8}
-                    />
-                    <div className="settings-prompt-actions">
-                      <button
-                        className="settings-save-btn settings-save-btn--sm"
-                        disabled={promptSaving[p.key] || !promptDrafts[p.key]?.trim()}
-                        onClick={() => handleSavePrompt(p.key)}
-                      >
-                        {promptSaving[p.key] ? 'Saving…' : 'Save'}
+                {PROMPT_GROUPS.map((group) => {
+                  const groupPrompts = group.keys.map((k) => prompts.find((p) => p.key === k)).filter(Boolean)
+                  if (groupPrompts.length === 0) return null
+                  const isOpen = expandedGroups[group.key]
+                  return (
+                    <div key={group.key} className="settings-prompt-group">
+                      <button className="settings-prompt-group-header" onClick={() => toggleGroup(group.key)}>
+                        <div className="settings-prompt-group-header-left">
+                          <span className="settings-prompt-group-title">{group.label}</span>
+                          <span className="settings-prompt-group-desc">{group.description}</span>
+                        </div>
+                        <span className={`settings-prompt-group-chevron${isOpen ? ' settings-prompt-group-chevron--open' : ''}`}>›</span>
                       </button>
-                      {p.is_custom && (
-                        <button
-                          className="settings-cancel-btn"
-                          onClick={() => handleResetPrompt(p.key)}
-                        >
-                          Reset to default
-                        </button>
+                      {isOpen && (
+                        <div className="settings-prompt-group-body">
+                          {groupPrompts.map((p) => (
+                            <div key={p.key} className="settings-prompt-card">
+                              <div className="settings-prompt-header">
+                                <span className="settings-prompt-label">{p.label}</span>
+                                {p.readonly && <span className="settings-prompt-badge settings-prompt-badge--locked">Read-only</span>}
+                                {!p.readonly && p.is_custom && <span className="settings-prompt-badge">Custom</span>}
+                              </div>
+                              {p.description && (
+                                <p className="settings-prompt-description">{p.description}</p>
+                              )}
+                              {p.readonly ? (
+                                <>
+                                  <pre className="settings-prompt-readonly">{p.text}</pre>
+                                  {p.variables && (
+                                    <p className="settings-hint settings-hint--mono">
+                                      Variables injetadas em runtime: <code>{p.variables}</code>
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <textarea
+                                    className="settings-prompt-textarea"
+                                    value={promptDrafts[p.key] ?? p.text}
+                                    onChange={(e) => setPromptDrafts((d) => ({ ...d, [p.key]: e.target.value }))}
+                                    rows={8}
+                                  />
+                                  <div className="settings-prompt-actions">
+                                    <button
+                                      className="settings-save-btn settings-save-btn--sm"
+                                      disabled={promptSaving[p.key] || !promptDrafts[p.key]?.trim()}
+                                      onClick={() => handleSavePrompt(p.key)}
+                                    >
+                                      {promptSaving[p.key] ? 'Saving…' : 'Save'}
+                                    </button>
+                                    {p.is_custom && (
+                                      <button
+                                        className="settings-cancel-btn"
+                                        onClick={() => handleResetPrompt(p.key)}
+                                      >
+                                        Reset to default
+                                      </button>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

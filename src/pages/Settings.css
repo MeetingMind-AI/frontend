@@ -134,6 +134,14 @@
   color: var(--yellow);
 }
 
+.settings-hint--mono code {
+  font-family: monospace;
+  font-size: 12px;
+  background: var(--bg-3);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
 .settings-save-btn {
   margin-top: 8px;
   padding: 8px 18px;
@@ -395,6 +403,78 @@
 
 /* ── Prompt editor ─────────────────────────────────────────────────────────── */
 
+/* Groups */
+.settings-prompt-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.settings-prompt-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-1);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 12px;
+  transition: background 0.12s;
+}
+
+.settings-prompt-group-header:hover {
+  background: var(--bg-3);
+}
+
+.settings-prompt-group-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-prompt-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.settings-prompt-group-desc {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.settings-prompt-group-chevron {
+  font-size: 18px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  line-height: 1;
+  transform: rotate(90deg);
+  transition: transform 0.15s;
+}
+
+.settings-prompt-group-chevron--open {
+  transform: rotate(270deg);
+}
+
+.settings-prompt-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+}
+
+.settings-prompt-group-body .settings-prompt-card {
+  border: none;
+  border-radius: 0;
+  background: var(--bg-0, var(--surface-2));
+}
+
+
+
 .settings-prompt-list {
   display: flex;
   flex-direction: column;
@@ -433,6 +513,18 @@
   color: var(--accent);
 }
 
+.settings-prompt-badge--locked {
+  background: var(--bg-3);
+  color: var(--text-3);
+}
+
+.settings-prompt-description {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin: 0;
+}
+
 .settings-prompt-textarea {
   width: 100%;
   background: var(--surface-1);
@@ -450,6 +542,22 @@
 .settings-prompt-textarea:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.settings-prompt-readonly {
+  background: var(--bg-0, #0d1117);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-3);
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  cursor: not-allowed;
+  user-select: text;
 }
 
 .settings-prompt-actions {
