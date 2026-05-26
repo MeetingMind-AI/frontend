@@ -1,0 +1,206 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #0d1117;
+  color: #e6edf3;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+}
+
+.mp-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+/* ── Header ── */
+.mp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
+}
+
+.mp-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e6edf3;
+}
+
+.mp-meeting-label {
+  font-size: 11px;
+  color: #6e7681;
+}
+
+.mp-back-btn {
+  background: none;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.mp-back-btn:hover {
+  background: #21262d;
+  color: #e6edf3;
+}
+
+/* ── Sections ── */
+.mp-section {
+  padding: 14px;
+  border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
+}
+
+.mp-section--parking {
+  flex: 1;
+  overflow-y: auto;
+  border-bottom: none;
+}
+
+.mp-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6e7681;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mp-badge-count {
+  background: #d29922;
+  color: #0d1117;
+  border-radius: 99px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ── Explain buttons ── */
+.mp-explain-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.mp-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.mp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mp-btn--tech {
+  background: rgba(79, 142, 247, 0.15);
+  color: #4f8ef7;
+  border: 1px solid rgba(79, 142, 247, 0.3);
+}
+
+.mp-btn--tech:not(:disabled):hover {
+  background: rgba(79, 142, 247, 0.25);
+}
+
+.mp-btn--biz {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.mp-btn--biz:not(:disabled):hover {
+  background: rgba(63, 185, 80, 0.25);
+}
+
+/* ── Explain result ── */
+.mp-explain-result {
+  margin-top: 12px;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.mp-explain-result-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6e7681;
+  margin-bottom: 6px;
+}
+
+.mp-explain-result-text {
+  font-size: 12px;
+  color: #c9d1d9;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+/* ── Parking lot ── */
+.mp-empty {
+  color: #6e7681;
+  font-size: 12px;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.mp-proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mp-proposal {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mp-proposal-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #d29922;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mp-proposal-text {
+  font-size: 12px;
+  color: #c9d1d9;
+  line-height: 1.5;
+}
