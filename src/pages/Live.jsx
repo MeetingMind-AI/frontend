@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createRoot } from 'react-dom/client'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction } from '../api'
+import MiniPipContent from './MiniPipContent'
 import './Live.css'
 
 const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
@@ -37,11 +39,16 @@ function Live() {
   const [modal, setModal] = useState(null)
   const [pendingProposals, setPendingProposals] = useState([])
   const [acceptedProposals, setAcceptedProposals] = useState([])
+  const [pipError, setPipError] = useState(null)
 
   const meetingTitle = parsedMeetingId ? `Meeting #${parsedMeetingId}` : 'Live Meeting'
 
   const transcriptEndRef = useRef(null)
   const wsRef = useRef(null)
+  const channelRef = useRef(null)
+  const pipWindowRef = useRef(null)
+  const pipRootRef = useRef(null)
+  const pendingProposalsRef = useRef([])
 
   const mapChunk = (c) => ({
     id: c.id,
@@ -50,6 +57,13 @@ function Live() {
     timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     role: '',
   })
+
+  useEffect(() => {
+    if (!parsedMeetingId) return
+    const ch = new BroadcastChannel(`meeting-${parsedMeetingId}`)
+    channelRef.current = ch
+    return () => { ch.close(); channelRef.current = null }
+  }, [parsedMeetingId])
 
   useEffect(() => {
     if (!parsedMeetingId) return
@@ -69,6 +83,7 @@ function Live() {
         setPendingProposals((prev) => [...prev, proposal])
         setToastProposal(proposal)
         playProposalSound(proposal.type)
+        channelRef.current?.postMessage({ type: 'proposal', proposal })
       },
     })
     wsRef.current = ws
@@ -154,6 +169,119 @@ function Live() {
     }
   }
 
+  // Keep a ref so openPip can read the latest proposals without stale closure
+  useEffect(() => { pendingProposalsRef.current = pendingProposals }, [pendingProposals])
+
+  const openPip = useCallback(async (fromBlur = false) => {
+    if (!parsedMeetingId) return
+    if (!fromBlur) setPipError(null)
+
+    // Already open — bring it to front
+    if (pipWindowRef.current && !pipWindowRef.current.closed) {
+      pipWindowRef.current.focus()
+      return
+    }
+
+    const parkingLotProposals = pendingProposalsRef.current.filter((p) => p.type === 'parking_lot')
+
+    // Document PiP requires secure context (https or localhost)
+    if (!('documentPictureInPicture' in window)) {
+      // Fallback: regular popup via window.open()
+      localStorage.setItem(`mini-popup-${parsedMeetingId}`, JSON.stringify({ proposals: parkingLotProposals }))
+      const popup = window.open(
+        `/popup?meetingId=${parsedMeetingId}&teamId=${teamId}`,
+        `mini-${parsedMeetingId}`,
+        'width=380,height=560,resizable=yes,top=80,left=80',
+      )
+      if (popup) {
+        pipWindowRef.current = popup
+      } else {
+        setPipError('Popup blocked — allow popups for this site')
+      }
+      return
+    }
+
+    try {
+      // Open the always-on-top PiP window
+      const pipWindow = await documentPictureInPicture.requestWindow({
+        width: 380,
+        height: 560,
+      })
+      pipWindowRef.current = pipWindow
+
+      // Copy stylesheets from the opener document (Google Developers approach)
+      ;[...document.styleSheets].forEach((styleSheet) => {
+        try {
+          const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('')
+          const style = document.createElement('style')
+          style.textContent = cssRules
+          pipWindow.document.head.appendChild(style)
+        } catch {
+          // Cross-origin sheet: link it by href instead
+          const link = document.createElement('link')
+          link.rel = 'stylesheet'
+          link.type = styleSheet.type
+          link.media = styleSheet.media
+          link.href = styleSheet.href
+          pipWindow.document.head.appendChild(link)
+        }
+      })
+
+      // PiP-specific baseline styles
+      const baseStyle = document.createElement('style')
+      baseStyle.textContent = `
+        @media all and (display-mode: picture-in-picture) {
+          body { margin: 0; background: #0d1117; }
+        }
+      `
+      pipWindow.document.head.appendChild(baseStyle)
+
+      // Render React content into the PiP document
+      const container = pipWindow.document.createElement('div')
+      pipWindow.document.body.appendChild(container)
+
+      // Capture main window reference before entering PiP context
+      const mainWindow = window
+      const root = createRoot(container)
+      pipRootRef.current = root
+
+      root.render(
+        <MiniPipContent
+          meetingId={parsedMeetingId}
+          initialProposals={parkingLotProposals}
+          onGoBack={() => {
+            pipWindow.close()
+            mainWindow.focus()  // focus opener per Google Developers reference
+          }}
+        />,
+      )
+
+      // Cleanup when PiP window is closed (per Google Developers reference)
+      pipWindow.addEventListener('pagehide', () => {
+        root.unmount()
+        pipWindowRef.current = null
+        pipRootRef.current = null
+      })
+    } catch (e) {
+      if (e.name === 'NotAllowedError') {
+        // Expected when called without a direct user gesture (e.g. blur event)
+        return
+      }
+      if (!fromBlur) setPipError(e.message || 'Failed to open PiP')
+      console.error('[Live] documentPictureInPicture.requestWindow() failed:', e)
+    }
+  }, [parsedMeetingId, teamId])
+
+  // Try to open PiP automatically when user switches to another window/app.
+  // The blur event is not a formal user gesture, so requestWindow() may throw
+  // NotAllowedError — openPip() catches it silently. Works in Chrome 148+.
+  useEffect(() => {
+    if (!parsedMeetingId) return
+    const handleBlur = () => openPip(true)
+    window.addEventListener('blur', handleBlur)
+    return () => window.removeEventListener('blur', handleBlur)
+  }, [parsedMeetingId, openPip])
+
   const speakerInitials = (name) =>
     name.split(' ').map((n) => n[0]).join('').toUpperCase()
 
@@ -186,6 +314,22 @@ function Live() {
         </div>
 
         <div className="live-header-right">
+          {parsedMeetingId && (
+            <>
+              <button className="live-pip-btn" onClick={openPip} title="Open floating mini panel (stays on top)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="3" width="20" height="18" rx="2" />
+                  <rect x="13" y="12" width="8" height="7" rx="1" fill="currentColor" stroke="none" />
+                </svg>
+                Pop out
+              </button>
+              {pipError && (
+                <span style={{ fontSize: '11px', color: 'var(--red)', maxWidth: '120px' }}>
+                  {pipError}
+                </span>
+              )}
+            </>
+          )}
           <button className="live-end-btn" onClick={() => navigate('/')}>
             Home
           </button>

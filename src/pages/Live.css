@@ -112,6 +112,26 @@
   background: var(--red-dim);
 }
 
+.live-pip-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(79, 142, 247, 0.35);
+  background: rgba(79, 142, 247, 0.08);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.live-pip-btn:hover {
+  background: rgba(79, 142, 247, 0.18);
+  border-color: var(--accent);
+}
+
 .live-body {
   flex: 1;
   display: flex;

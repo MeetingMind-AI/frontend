@@ -11,6 +11,7 @@ import Login from './pages/Login'
 import Teams from './pages/Teams'
 import Settings from './pages/Settings'
 import JoinTeam from './pages/JoinTeam'
+import MiniPopup from './pages/MiniPopup'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -41,6 +42,7 @@ function AppRoutes() {
       </Route>
       <Route path="/teams/:teamId/live/:meetingId" element={<ProtectedRoute><Live /></ProtectedRoute>} />
       <Route path="/teams/:teamId/review/:meetingId?" element={<ProtectedRoute><Review /></ProtectedRoute>} />
+      <Route path="/popup" element={<ProtectedRoute><MiniPopup /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/teams" replace />} />
       <Route path="*" element={<Navigate to="/teams" replace />} />
     </Routes>
