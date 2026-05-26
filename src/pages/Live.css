@@ -172,7 +172,7 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .live-msg {
@@ -180,6 +180,15 @@
   align-items: flex-start;
   gap: 12px;
   animation: msgSlide 0.3s ease-out;
+}
+
+.live-msg--continuation {
+  margin-top: -10px;
+}
+
+.live-msg-avatar-spacer {
+  width: 32px;
+  flex-shrink: 0;
 }
 
 @keyframes msgSlide {

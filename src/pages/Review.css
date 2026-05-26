@@ -266,6 +266,16 @@
   padding: 10px 20px;
 }
 
+.rv-msg--continuation {
+  padding-top: 2px;
+  padding-bottom: 10px;
+}
+
+.rv-msg-avatar-spacer {
+  width: 30px;
+  flex-shrink: 0;
+}
+
 .rv-msg-avatar {
   width: 30px;
   height: 30px;

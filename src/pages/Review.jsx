@@ -702,21 +702,30 @@ function Review() {
                       {loading ? 'Loading transcript...' : 'No transcript available.'}
                     </div>
                   )}
-                  {feed.map((msg) => (
-                    <div className="rv-msg" key={msg.id}>
-                      <div className="rv-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
-                        {speakerInitials(msg.speaker)}
-                      </div>
-                      <div className="rv-msg-body">
-                        <div className="rv-msg-meta">
-                          <span className="rv-msg-speaker">{msg.speaker}</span>
-                          {msg.role && <span className="rv-msg-role">{msg.role}</span>}
-                          <span className="rv-msg-time">{msg.timestamp}</span>
+                  {feed.map((msg, i) => {
+                    const isFirst = i === 0 || feed[i - 1].speaker !== msg.speaker
+                    return (
+                      <div className={`rv-msg${isFirst ? '' : ' rv-msg--continuation'}`} key={msg.id}>
+                        {isFirst ? (
+                          <div className="rv-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
+                            {speakerInitials(msg.speaker)}
+                          </div>
+                        ) : (
+                          <div className="rv-msg-avatar-spacer" />
+                        )}
+                        <div className="rv-msg-body">
+                          {isFirst && (
+                            <div className="rv-msg-meta">
+                              <span className="rv-msg-speaker">{msg.speaker}</span>
+                              {msg.role && <span className="rv-msg-role">{msg.role}</span>}
+                              <span className="rv-msg-time">{msg.timestamp}</span>
+                            </div>
+                          )}
+                          <div className="rv-msg-text">{msg.text}</div>
                         </div>
-                        <div className="rv-msg-text">{msg.text}</div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </>
             )

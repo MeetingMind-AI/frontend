@@ -227,21 +227,30 @@ function Live() {
                 No transcript captured yet — speak to begin.
               </div>
             )}
-            {transcript && transcript.map((msg) => (
-              <div className="live-msg" key={msg.id}>
-                <div className="live-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
-                  {speakerInitials(msg.speaker)}
-                </div>
-                <div className="live-msg-body">
-                  <div className="live-msg-meta">
-                    <span className="live-msg-speaker">{msg.speaker}</span>
-                    <span className="live-msg-role">{msg.role}</span>
-                    <span className="live-msg-time">{msg.timestamp}</span>
+            {transcript && transcript.map((msg, i) => {
+              const isFirst = i === 0 || transcript[i - 1].speaker !== msg.speaker
+              return (
+                <div className={`live-msg${isFirst ? '' : ' live-msg--continuation'}`} key={msg.id}>
+                  {isFirst ? (
+                    <div className="live-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
+                      {speakerInitials(msg.speaker)}
+                    </div>
+                  ) : (
+                    <div className="live-msg-avatar-spacer" />
+                  )}
+                  <div className="live-msg-body">
+                    {isFirst && (
+                      <div className="live-msg-meta">
+                        <span className="live-msg-speaker">{msg.speaker}</span>
+                        <span className="live-msg-role">{msg.role}</span>
+                        <span className="live-msg-time">{msg.timestamp}</span>
+                      </div>
+                    )}
+                    <div className="live-msg-text">{msg.text}</div>
                   </div>
-                  <div className="live-msg-text">{msg.text}</div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
             <div ref={transcriptEndRef} />
           </div>
         </div>
