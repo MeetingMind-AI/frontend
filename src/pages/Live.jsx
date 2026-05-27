@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction } from '../api'
+import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction, getMeeting } from '../api'
 import MiniPipContent from './MiniPipContent'
 import './Live.css'
 
@@ -93,9 +93,19 @@ function Live() {
 
 
   useEffect(() => {
+    if (!parsedMeetingId) {
+      const t = setInterval(() => setElapsed((e) => e + 1), 1000)
+      return () => clearInterval(t)
+    }
+    getMeeting(parsedMeetingId).then((data) => {
+      if (data?.created_at) {
+        const startMs = new Date(data.created_at).getTime()
+        setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
+      }
+    }).catch(() => {})
     const t = setInterval(() => setElapsed((e) => e + 1), 1000)
     return () => clearInterval(t)
-  }, [])
+  }, [parsedMeetingId])
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' })
