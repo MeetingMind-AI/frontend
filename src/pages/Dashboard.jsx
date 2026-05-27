@@ -126,6 +126,19 @@ function MeetingCard({ meeting, teamId, teamTopics, onRename, onDelete, onAddTop
 
       <p className="dash-card-summary">{meeting.summary}</p>
 
+      {meeting.speakers.length > 0 && (
+        <div className="dash-card-speakers">
+          {meeting.speakers.map((name) => (
+            <span key={name} className="dash-speaker" title={name}>
+              <span className="dash-speaker-avatar" style={{ background: speakerColor(name) }}>
+                {initials(name)}
+              </span>
+              <span className="dash-speaker-name">{name}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="dash-card-meta-row">
         <span className="dash-card-meta-item">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

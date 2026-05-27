@@ -33,6 +33,7 @@ export function meetingToCard(m) {
     parkingLotCount: sm?.parking_lot?.length ?? 0,
     summary: sm?.summary ?? (m.status !== 'completed' ? 'Meeting in progress...' : 'No summary available.'),
     topics: m.topics ?? [],
+    speakers: m.speakers ?? [],
   }
 }
 
