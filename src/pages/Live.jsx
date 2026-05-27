@@ -191,7 +191,7 @@ function Live() {
       const popup = window.open(
         `/popup?meetingId=${parsedMeetingId}&teamId=${teamId}`,
         `mini-${parsedMeetingId}`,
-        'width=380,height=560,resizable=yes,top=80,left=80',
+        'popup=yes,width=380,height=560,resizable=yes,top=80,left=80',
       )
       if (popup) {
         pipWindowRef.current = popup
