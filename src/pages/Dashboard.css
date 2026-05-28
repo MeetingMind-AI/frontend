@@ -323,6 +323,17 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  align-items: center;
+}
+
+.dash-card-speakers-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  width: 100%;
+  margin-bottom: 2px;
 }
 
 .dash-speaker {

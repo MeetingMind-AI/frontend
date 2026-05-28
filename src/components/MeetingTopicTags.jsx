@@ -18,12 +18,12 @@ function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove, dropUp }) {
 
   return (
     <div className="mm-topic-add-wrap" ref={ref}>
-      <button className="mm-topic-add-btn" onClick={() => setOpen((v) => !v)} title="Tag meeting">
+      <button className="mm-topic-add-btn" onClick={() => setOpen((v) => !v)} title="Add topic">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        Tag
+        Topic
       </button>
       {open && (
         <div className={`mm-topic-dropdown mm-topic-dropdown--${dropUp ? 'up' : 'down'}`}>
@@ -70,7 +70,7 @@ export default function MeetingTopicTags({ meetingTopics, teamTopics, onAdd, onR
           <button
             className="mm-topic-chip-remove"
             onClick={() => onRemove(t.id)}
-            title="Remove tag"
+            title="Remove topic"
           >
             ×
           </button>

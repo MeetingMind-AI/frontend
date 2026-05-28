@@ -128,6 +128,7 @@ function MeetingCard({ meeting, teamId, teamTopics, onRename, onDelete, onAddTop
 
       {meeting.speakers.length > 0 && (
         <div className="dash-card-speakers">
+          <span className="dash-card-speakers-label">Identified speakers:</span>
           {meeting.speakers.map((name) => (
             <span key={name} className="dash-speaker" title={name}>
               <span className="dash-speaker-avatar" style={{ background: speakerColor(name) }}>
