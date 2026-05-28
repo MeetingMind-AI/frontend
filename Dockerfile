@@ -14,12 +14,15 @@ RUN npm run build
 FROM nginx:alpine
 
 # Generate a self-signed cert for HTTPS (dev/POC only — not for production)
+# SAN entries cover localhost and any host IP so modern browsers don't add a
+# hostname-mismatch error on top of the untrusted-CA warning.
 RUN apk add --no-cache openssl \
     && mkdir -p /etc/nginx/ssl \
     && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
         -keyout /etc/nginx/ssl/key.pem \
         -out /etc/nginx/ssl/cert.pem \
         -subj "/CN=meetingmind-local" \
+        -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
     && apk del openssl
 
 COPY --from=builder /app/dist /usr/share/nginx/html
