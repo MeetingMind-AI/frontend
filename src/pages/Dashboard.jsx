@@ -234,6 +234,7 @@ export default function Dashboard() {
   const [dispatchError, setDispatchError] = useState('')
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [topicFilter, setTopicFilter] = useState([])
   const [meetings, setMeetings] = useState([])
   const [teamTopics, setTeamTopics] = useState([])
 
@@ -311,6 +312,10 @@ export default function Dashboard() {
     }
   }
 
+  const toggleTopicFilter = (id) => {
+    setTopicFilter((prev) => prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id])
+  }
+
   const filtered = meetings
     .filter((m) => {
       if (filter === 'pending') return !m.reviewed
@@ -318,6 +323,7 @@ export default function Dashboard() {
       return true
     })
     .filter((m) => !search.trim() || m.title.toLowerCase().includes(search.toLowerCase()))
+    .filter((m) => topicFilter.length === 0 || topicFilter.every((id) => m.topics.some((t) => t.id === id)))
 
   return (
     <div className="dash-page">
@@ -471,6 +477,31 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {teamTopics.length > 0 && (
+          <div className="dash-topic-filter-row">
+            <span className="dash-topic-filter-label">Topics:</span>
+            {teamTopics.map((t) => {
+              const active = topicFilter.includes(t.id)
+              return (
+                <button
+                  key={t.id}
+                  className={`dash-topic-filter-chip ${active ? 'dash-topic-filter-chip--active' : ''}`}
+                  style={active ? { background: t.color + '22', color: t.color, borderColor: t.color + '88' } : {}}
+                  onClick={() => toggleTopicFilter(t.id)}
+                >
+                  <span className="dash-topic-filter-dot" style={{ background: t.color }} />
+                  {t.name}
+                </button>
+              )
+            })}
+            {topicFilter.length > 0 && (
+              <button className="dash-topic-filter-clear" onClick={() => setTopicFilter([])}>
+                Clear
+              </button>
+            )}
+          </div>
+        )}
 
         {filtered.length > 0 ? (
           <div className="dash-meetings-grid">

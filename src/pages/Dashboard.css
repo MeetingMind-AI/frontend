@@ -218,6 +218,74 @@
   color: var(--text-1);
 }
 
+/* ── Topic filter row ── */
+.dash-topic-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 4px;
+}
+
+.dash-topic-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.dash-topic-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.dash-topic-filter-chip:hover {
+  color: var(--text-1);
+  background: var(--bg-4);
+}
+
+.dash-topic-filter-chip--active {
+  font-weight: 600;
+}
+
+.dash-topic-filter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dash-topic-filter-clear {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+  margin-left: 2px;
+}
+
+.dash-topic-filter-clear:hover {
+  color: var(--text-1);
+  background: var(--bg-3);
+}
+
 /* ── Meeting card grid ── */
 .dash-meetings-grid {
   display: grid;
