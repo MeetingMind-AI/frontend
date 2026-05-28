@@ -45,7 +45,7 @@ export default function Teams() {
   return (
     <div className="teams-page">
       <header className="teams-header">
-        <div className="teams-logo">
+        <div className="teams-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
           <svg viewBox="0 0 20 20" fill="none" width="22" height="22">
             <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="#4f8ef7" strokeWidth="1.5" />
             <circle cx="10" cy="10" r="2.5" fill="#4f8ef7" />

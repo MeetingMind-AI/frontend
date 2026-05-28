@@ -241,7 +241,7 @@ function Review() {
     <div className="rv-page">
       <header className="rv-header">
         <div className="rv-header-left">
-          <div className="rv-logo">
+          <div className="rv-logo" onClick={() => navigate(`/teams/${teamId}`)} style={{ cursor: 'pointer' }}>
             <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
               <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="#4f8ef7" strokeWidth="1.5" />
               <circle cx="10" cy="10" r="2.5" fill="#4f8ef7" />

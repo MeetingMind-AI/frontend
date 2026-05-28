@@ -16,7 +16,7 @@ const LOADING_STATUS_LABELS = {
   dispatched:        'Dispatching to meeting',
   joining:           'Sending request to join',
   waiting:           'Awaiting host approval',
-  waiting_admission: 'Awaiting admission',
+  waiting_admission: 'Awaiting Admission',
   active:            'Finalizing last tweaks',
   in_meeting:        'Bot connected',
   connected:         'Bot connected',
@@ -372,7 +372,7 @@ function Live() {
     <div className="live-page">
       <header className="live-header">
         <div className="live-header-left">
-          <div className="live-logo">
+          <div className="live-logo" onClick={() => navigate(`/teams/${teamId}`)} style={{ cursor: 'pointer' }}>
             <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
               <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="#4f8ef7" strokeWidth="1.5" />
               <circle cx="10" cy="10" r="2.5" fill="#4f8ef7" />

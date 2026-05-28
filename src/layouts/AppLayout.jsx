@@ -89,12 +89,17 @@ export default function AppLayout() {
     <div className="app-layout">
       <aside className="app-sidebar">
         <div className="sidebar-logo">
-          <Link to="/teams" className="sidebar-logo-icon" title="All teams">
+          <span
+            className="sidebar-logo-icon"
+            style={{ cursor: 'pointer' }}
+            title="Refresh dashboard"
+            onClick={() => { window.location.href = `/teams/${teamId}` }}
+          >
             <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
               <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="#4f8ef7" strokeWidth="1.5" />
               <circle cx="10" cy="10" r="2.5" fill="#4f8ef7" />
             </svg>
-          </Link>
+          </span>
           <div className="sidebar-logo-text">
             <span className="sidebar-app-name">MeetingMind</span>
             {team && <span className="sidebar-team-chip">{team.name}</span>}
