@@ -1,11 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction, getMeeting } from '../api'
+import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction, getMeeting, deleteMeeting } from '../api'
 import MiniPipContent from './MiniPipContent'
 import './Live.css'
 
 const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
+
+const ACTIVE_BOT_STATUSES = new Set(['pending','requested','dispatched','joining','waiting','waiting_admission','active','in_meeting','connected'])
+const READY_STATUSES = new Set(['active', 'in_meeting', 'connected'])
+
+const LOADING_STATUS_LABELS = {
+  pending:           'Preparing bot',
+  requested:         'Bot starting',
+  dispatched:        'Dispatching to meeting',
+  joining:           'Sending request to join',
+  waiting:           'Awaiting host approval',
+  waiting_admission: 'Awaiting admission',
+  active:            'Finalizing last tweaks',
+  in_meeting:        'Bot connected',
+  connected:         'Bot connected',
+}
 
 function playProposalSound(type) {
   try {
@@ -35,6 +50,11 @@ function Live() {
   const [explainTime, setExplainTime] = useState(null)
   const [elapsed, setElapsed] = useState(0)
   const [wsStatus, setWsStatus] = useState(parsedMeetingId ? 'connecting' : 'disconnected')
+  const [botStatus, setBotStatus] = useState(null)
+  const botStatusRef = useRef(null)
+  const hasBeenActiveRef = useRef(false)
+  const [statusHistory, setStatusHistory] = useState([])
+  const [loadingPhase, setLoadingPhase] = useState(parsedMeetingId ? 'loading' : 'done')
   const [toastProposal, setToastProposal] = useState(null)
   const [modal, setModal] = useState(null)
   const [pendingProposals, setPendingProposals] = useState([])
@@ -102,10 +122,56 @@ function Live() {
         const startMs = new Date(data.created_at).getTime()
         setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
       }
+      if (data?.status) {
+        setBotStatus(data.status)
+        botStatusRef.current = data.status
+      }
     }).catch(() => {})
     const t = setInterval(() => setElapsed((e) => e + 1), 1000)
     return () => clearInterval(t)
   }, [parsedMeetingId])
+
+  useEffect(() => {
+    if (!parsedMeetingId) return
+    const t = setInterval(() => {
+      if (['completed', 'failed'].includes(botStatusRef.current)) return
+      getMeeting(parsedMeetingId)
+        .then((data) => {
+          if (data?.status) {
+            setBotStatus(data.status)
+            botStatusRef.current = data.status
+          }
+        })
+        .catch(() => {})
+    }, 2000)
+    return () => clearInterval(t)
+  }, [parsedMeetingId])
+
+  useEffect(() => {
+    if (!botStatus || !parsedMeetingId) return
+    if (ACTIVE_BOT_STATUSES.has(botStatus)) {
+      hasBeenActiveRef.current = true
+      return
+    }
+    if (botStatus === 'completed' && hasBeenActiveRef.current) {
+      const t = setTimeout(() => navigate(`/teams/${teamId}/review/${parsedMeetingId}`), 2000)
+      return () => clearTimeout(t)
+    }
+  }, [botStatus, parsedMeetingId, teamId, navigate])
+
+  useEffect(() => {
+    if (!botStatus || !parsedMeetingId) return
+    setStatusHistory((prev) => {
+      const last = prev[prev.length - 1]
+      if (last?.status === botStatus) return prev
+      return [...prev, { status: botStatus }]
+    })
+    if (READY_STATUSES.has(botStatus)) {
+      setLoadingPhase('fading')
+      const t = setTimeout(() => setLoadingPhase('done'), 700)
+      return () => clearTimeout(t)
+    }
+  }, [botStatus, parsedMeetingId])
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -349,7 +415,7 @@ function Live() {
             }
             navigate(parsedMeetingId ? `/teams/${teamId}/review/${parsedMeetingId}` : `/teams/${teamId}`)
           }}>
-            End Meeting
+            Finish transcription
           </button>
         </div>
       </header>
@@ -507,6 +573,60 @@ function Live() {
                 Reject
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {loadingPhase !== 'done' && (
+        <div className={`live-loading-overlay${loadingPhase === 'fading' ? ' live-loading-overlay--out' : ''}`}>
+          <div className="live-loading-content">
+            <div className="live-loading-logo-wrap">
+              <div className="live-loading-spinner" />
+              <svg viewBox="0 0 20 20" fill="none" width="44" height="44">
+                <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="#4f8ef7" strokeWidth="1.5" />
+                <circle cx="10" cy="10" r="2.5" fill="#4f8ef7" />
+              </svg>
+            </div>
+            <div className="live-loading-brand">MeetingMind</div>
+            <div className="live-loading-tagline">Your AI assistant is joining the meeting</div>
+            <div className="live-loading-steps">
+              {statusHistory.length === 0 && (
+                <div className="live-loading-step live-loading-step--active">
+                  <span className="live-loading-step-dot">
+                    <span className="live-loading-step-pulse" />
+                  </span>
+                  <span className="live-loading-step-label">Initializing…</span>
+                </div>
+              )}
+              {statusHistory.map((item, idx) => {
+                const isLast = idx === statusHistory.length - 1
+                const isDone = !isLast || READY_STATUSES.has(item.status)
+                const label = LOADING_STATUS_LABELS[item.status] || item.status.replace(/_/g, ' ')
+                return (
+                  <div
+                    key={idx}
+                    className={`live-loading-step${isDone ? ' live-loading-step--done' : ' live-loading-step--active'}`}
+                  >
+                    <span className="live-loading-step-dot">
+                      {isDone ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : (
+                        <span className="live-loading-step-pulse" />
+                      )}
+                    </span>
+                    <span className="live-loading-step-label">{label}</span>
+                  </div>
+                )
+              })}
+            </div>
+            <button className="live-loading-cancel-btn" onClick={async () => {
+              try { await deleteMeeting(parsedMeetingId) } catch {}
+              navigate(`/teams/${teamId}`)
+            }}>
+              Cancel
+            </button>
           </div>
         </div>
       )}
