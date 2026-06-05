@@ -78,12 +78,32 @@ function Live() {
     role: '',
   })
 
+  // 1. Keep a stable reference to our action handlers so the event listener always uses the latest version
+  const actionHandlersRef = useRef({ accept: handleAcceptProposal, reject: handleRejectProposal })
+  useEffect(() => {
+    actionHandlersRef.current = { accept: handleAcceptProposal, reject: handleRejectProposal }
+  }, [handleAcceptProposal, handleRejectProposal])
+
+  // 2. Establish the two-way sync channel
   useEffect(() => {
     if (!parsedMeetingId) return
     const ch = new BroadcastChannel(`meeting-${parsedMeetingId}`)
     channelRef.current = ch
+
+    // Listen for commands coming from the PiP window
+    ch.onmessage = (e) => {
+      if (e.data.type === 'action_proposal') {
+        if (e.data.action === 'accepted') actionHandlersRef.current.accept(e.data.proposal)
+        if (e.data.action === 'rejected') actionHandlersRef.current.reject(e.data.proposal)
+      }
+    }
     return () => { ch.close(); channelRef.current = null }
   }, [parsedMeetingId])
+
+  // 3. Push state updates TO the PiP window whenever pendingProposals changes on the main page
+  useEffect(() => {
+    channelRef.current?.postMessage({ type: 'sync_proposals', pending: pendingProposals })
+  }, [pendingProposals])
 
   useEffect(() => {
     if (!parsedMeetingId) return
@@ -258,12 +278,12 @@ function Live() {
       return
     }
 
-    const parkingLotProposals = pendingProposalsRef.current.filter((p) => p.type === 'parking_lot')
+    const allPendingProposals = pendingProposalsRef.current
 
     // Document PiP requires secure context (https or localhost)
     if (!('documentPictureInPicture' in window)) {
       // Fallback: regular popup via window.open()
-      localStorage.setItem(`mini-popup-${parsedMeetingId}`, JSON.stringify({ proposals: parkingLotProposals }))
+      localStorage.setItem(`mini-popup-${parsedMeetingId}`, JSON.stringify({ proposals: allPendingProposals }))
       const popup = window.open(
         `/popup?meetingId=${parsedMeetingId}&teamId=${teamId}`,
         `mini-${parsedMeetingId}`,
@@ -324,7 +344,7 @@ function Live() {
       root.render(
         <MiniPipContent
           meetingId={parsedMeetingId}
-          initialProposals={parkingLotProposals}
+          initialProposals={allPendingProposals}
           onGoBack={() => {
             pipWindow.close()
             mainWindow.focus()  // focus opener per Google Developers reference
