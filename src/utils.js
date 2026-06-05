@@ -23,11 +23,13 @@ export function formatDate(iso) {
 // Map a raw meeting object from GET /api/meetings into the shape Dashboard cards expect
 export function meetingToCard(m) {
   const sm = parseScrumMaster(m.summary?.scrum_master)
+  let durationDisplay = m.status
+  if (m.status === 'needs_human_help') durationDisplay = 'Blocked (Lobby)'
   return {
     id: m.id,
     title: formatMeetingTitle(m.title),
     date: formatDate(m.created_at),
-    duration: m.status,
+    duration: durationDisplay,
     reviewed: m.status === 'completed',
     actionItemCount: sm?.to_do?.length ?? 0,
     parkingLotCount: sm?.parking_lot?.length ?? 0,
