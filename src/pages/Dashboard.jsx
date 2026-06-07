@@ -126,19 +126,21 @@ function MeetingCard({ meeting, teamId, teamTopics, onRename, onDelete, onAddTop
 
       <p className="dash-card-summary">{meeting.summary}</p>
 
-      {meeting.speakers.length > 0 && (
-        <div className="dash-card-speakers">
-          <span className="dash-card-speakers-label">Identified speakers:</span>
-          {meeting.speakers.map((name) => (
-            <span key={name} className="dash-speaker" title={name}>
-              <span className="dash-speaker-avatar" style={{ background: speakerColor(name) }}>
-                {initials(name)}
+      <div className="dash-card-speakers">
+        {meeting.speakers.length > 0 && (
+          <>
+            <span className="dash-card-speakers-label">Identified speakers:</span>
+            {meeting.speakers.map((name) => (
+              <span key={name} className="dash-speaker" title={name}>
+                <span className="dash-speaker-avatar" style={{ background: speakerColor(name) }}>
+                  {initials(name)}
+                </span>
+                <span className="dash-speaker-name">{name}</span>
               </span>
-              <span className="dash-speaker-name">{name}</span>
-            </span>
-          ))}
-        </div>
-      )}
+            ))}
+          </>
+        )}
+      </div>
 
       <div className="dash-card-meta-row">
         <span className="dash-card-meta-item">
@@ -150,7 +152,7 @@ function MeetingCard({ meeting, teamId, teamTopics, onRename, onDelete, onAddTop
         </span>
       </div>
 
-      {(meeting.topics.length > 0 || teamTopics.length > 0) && (
+      {teamTopics.length > 0 && (
         <div className="dash-card-topics">
           <MeetingTopicTags
             meetingTopics={meeting.topics}
