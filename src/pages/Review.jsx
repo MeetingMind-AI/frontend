@@ -140,6 +140,7 @@ function Review() {
   const [summaryTab, setSummaryTab] = useState('general')
   const [meetingTopics, setMeetingTopics] = useState([])
   const [teamTopics, setTeamTopics] = useState([])
+  const [suggestionsOpen, setSuggestionsOpen] = useState(true)
 
   function proposalToTasks(proposals, meeting) {
     const items = []
@@ -690,12 +691,52 @@ function Review() {
               text: c.text,
               timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             }))
+            const allSuggestions = tasks.map((t) => ({ ...t }))
             return (
               <>
                 <div className="rv-transcript-header">
                   <span className="rv-section-label">Full Transcript</span>
                   <span className="rv-transcript-count">{feed.length} messages</span>
                 </div>
+
+                {allSuggestions.length > 0 && (
+                  <div className={`rv-suggestions-bar${suggestionsOpen ? ' rv-suggestions-bar--open' : ''}`}>
+                    <button
+                      className="rv-suggestions-toggle"
+                      onClick={() => setSuggestionsOpen((v) => !v)}
+                    >
+                      <svg
+                        className={`rv-suggestions-chevron${suggestionsOpen ? ' rv-suggestions-chevron--open' : ''}`}
+                        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      AI Suggestions
+                      <span className="rv-suggestions-count">{allSuggestions.length}</span>
+                    </button>
+
+                    {suggestionsOpen && (
+                      <div className="rv-suggestions-chips">
+                        {allSuggestions.map((t) => (
+                          <span
+                            key={t.id}
+                            className="rv-suggestion-chip"
+                            style={{ '--chip-color': TYPE_META[t.type].color, '--chip-bg': TYPE_META[t.type].bg }}
+                          >
+                            <span className="rv-suggestion-chip-badge">{TYPE_META[t.type].label}</span>
+                            {t.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="rv-transcript-feed">
                   {feed.length === 0 && (
                     <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
