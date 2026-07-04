@@ -46,13 +46,29 @@ const itemLabel = (t) =>
 export function buildKanbanTasks(actions) {
   const items = []
   for (const p of (actions.to_do?.accepted ?? [])) {
+    let col = 'todo'
+    let title = p.content
+    if (title.startsWith('[DOING] ')) {
+      col = 'doing'
+      title = title.substring(8)
+    } else if (title.startsWith('[DONE] ')) {
+      col = 'done'
+      title = title.substring(7)
+    } else if (title.startsWith('[TODO] ')) {
+      title = title.substring(7)
+    }
+
     items.push({
       id: p.id,
-      title: p.content,
+      meetingId: p.meeting_id,
+      title: title,
+      rawContent: p.content,
       meeting: formatMeetingTitle(p.meeting_title),
       meetingDate: formatDate(p.meeting_date),
       type: 'todo',
-      kanban_status: 'todo',
+      kanban_status: col,
+      assignee: p.assignee,
+      status: p.status
     })
   }
   return items
@@ -64,10 +80,12 @@ export function buildParkingLotItems(actions) {
   for (const p of (actions.parking_lot?.accepted ?? [])) {
     items.push({
       id: p.id,
+      meetingId: p.meeting_id,
       text: p.content,
       meeting: formatMeetingTitle(p.meeting_title),
       date: formatDate(p.meeting_date),
       status: 'open',
+      assignee: p.assignee
     })
   }
   return items
@@ -79,10 +97,12 @@ export function buildScheduleItems(actions) {
   for (const p of (actions.to_schedule?.accepted ?? [])) {
     items.push({
       id: p.id,
+      meetingId: p.meeting_id,
       title: p.content,
       meeting: formatMeetingTitle(p.meeting_title),
       type: 'schedule',
       schedule_status: 'pending',
+      assignee: p.assignee
     })
   }
   return items

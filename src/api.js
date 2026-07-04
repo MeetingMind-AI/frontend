@@ -212,9 +212,22 @@ const BASE = import.meta.env.VITE_API_URL ?? ''
     return apiFetch(`/api/actions${qs}`)
   }
 
-  export async function updateAction(meetingId, actionId, status, content) {
-    const body = { status }
+  export async function createAction(meetingId, actionType, content, assigneeId = null) {
+    const body = { action_type: actionType, content }
+    if (assigneeId !== null) body.assignee_id = assigneeId
+    return apiFetch(`/api/meetings/${meetingId}/actions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  }
+
+  export async function updateAction(meetingId, actionId, status, content, assigneeId = undefined, actionType = undefined) {
+    const body = {}
+    if (status !== undefined) body.status = status
     if (content !== undefined) body.content = content
+    if (assigneeId !== undefined) body.assignee_id = assigneeId
+    if (actionType !== undefined) body.action_type = actionType
     return apiFetch(`/api/meetings/${meetingId}/actions/${actionId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
