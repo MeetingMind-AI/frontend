@@ -465,6 +465,10 @@
   border: 1px solid rgba(188, 140, 255, 0.4);
 }
 
+.live-proposal-toast--blocker {
+  border: 1px solid rgba(255, 69, 58, 0.4);
+}
+
 .live-proposal-header {
   display: flex;
   align-items: flex-start;
@@ -493,6 +497,11 @@
 .live-proposal-badge--to_schedule {
   color: var(--purple);
   background: rgba(188, 140, 255, 0.15);
+}
+
+.live-proposal-badge--blocker {
+  color: var(--red);
+  background: rgba(255, 69, 58, 0.15);
 }
 
 .live-proposal-close {
@@ -604,6 +613,11 @@
 .live-proposal-card-badge--to_schedule {
   color: var(--purple);
   background: rgba(188, 140, 255, 0.15);
+}
+
+.live-proposal-card-badge--blocker {
+  color: var(--red);
+  background: rgba(255, 69, 58, 0.15);
 }
 
 .live-proposal-card-text {

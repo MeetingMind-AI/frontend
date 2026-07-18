@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { explainMeeting } from '../api'
 import './MiniPopup.css'
 
-const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
+const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE', blocker: 'BLOCKER' }
 
 export default function MiniPipContent({ meetingId, initialProposals, onGoBack }) {
   const [proposals, setProposals] = useState(initialProposals)

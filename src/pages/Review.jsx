@@ -150,11 +150,11 @@ function Review() {
     let id = 1
     for (const typeGroup of Object.values(proposals)) {
       for (const p of (typeGroup.pending ?? [])) {
-        const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : 'todo'
+        const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : p.action_type === 'blocker' ? 'blocker' : 'todo'
         items.push({ id: p.id || id++, title: p.content, type, status: 'suggested', meeting })
       }
       for (const p of (typeGroup.accepted ?? [])) {
-        const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : 'todo'
+        const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : p.action_type === 'blocker' ? 'blocker' : 'todo'
         items.push({ id: p.id || id++, title: p.content, type, status: 'approved', meeting })
       }
     }

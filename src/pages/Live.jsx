@@ -5,7 +5,7 @@ import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateActi
 import MiniPipContent from './MiniPipContent'
 import './Live.css'
 
-const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE' }
+const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE', blocker: 'BLOCKER' }
 
 const ACTIVE_BOT_STATUSES = new Set(['pending','requested','dispatched','joining','waiting','waiting_admission','active','in_meeting','connected'])
 const READY_STATUSES = new Set(['active', 'in_meeting', 'connected'])
