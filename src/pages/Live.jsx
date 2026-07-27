@@ -48,7 +48,7 @@ function Live() {
 
   const [transcript, setTranscript] = useState(null)
   const [explainLoading, setExplainLoading] = useState(false)
-  const [explainTime, setExplainTime] = useState(null)
+  const [explainTime, setExplainTime] = useState(2)
   const [elapsed, setElapsed] = useState(0)
   const [wsStatus, setWsStatus] = useState(parsedMeetingId ? 'connecting' : 'disconnected')
   const [botStatus, setBotStatus] = useState(null)

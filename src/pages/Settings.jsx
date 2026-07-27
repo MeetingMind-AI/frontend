@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  getTeam, updateTeam, getMembers, kickMember,
+  getTeam, updateTeam, getMembers, kickMember, updateTeamMember,
   getTopics, createTopic, updateTopic, deleteTopic,
   getInviteLink, leaveTeam,
   getTeamPrompts, updateTeamPrompt, resetTeamPrompt,
@@ -118,6 +118,21 @@ export default function Settings() {
     } catch (err) {
       alert(err.message)
     }
+  }
+
+  const handleUpdateMember = async (userId, role, tags) => {
+    try {
+      const updatedUser = await updateTeamMember(teamId, userId, { role, notification_tags: tags })
+      setMembers((prev) => prev.map((m) => m.id === userId ? updatedUser : m))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const toggleNotificationTag = (member, tag) => {
+    const tags = member.notification_tags || []
+    const newTags = tags.includes(tag) ? tags.filter(t => t !== tag) : [...tags, tag]
+    handleUpdateMember(member.id, member.role, newTags)
   }
 
   const handleGetInvite = async () => {
@@ -289,9 +304,42 @@ export default function Settings() {
                         ? <img src={m.photo_url} alt={m.name} />
                         : <span>{initials(m.name)}</span>}
                     </div>
-                    <div className="settings-member-info">
+                    <div className="settings-member-info" style={{ flex: 1 }}>
                       <span className="settings-member-name">{m.name}</span>
                       <span className="settings-member-email">{m.email}</span>
+                      {(m.id === user?.id || isOwner) && (
+                        <div style={{ marginTop: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <label>
+                            Role:
+                            <select
+                              value={m.role || 'member'}
+                              disabled={!isOwner}
+                              onChange={(e) => handleUpdateMember(m.id, e.target.value, m.notification_tags)}
+                              style={{ marginLeft: '4px', fontSize: '12px' }}
+                            >
+                              <option value="member">Member</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ color: 'var(--text-2)' }}>Notifications:</span>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={(m.notification_tags || []).includes('technical')}
+                                onChange={() => toggleNotificationTag(m, 'technical')}
+                              /> Technical
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={(m.notification_tags || []).includes('business')}
+                                onChange={() => toggleNotificationTag(m, 'business')}
+                              /> Business
+                            </label>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     {team && m.id === team.owner_id && (
                       <span className="settings-member-badge">Owner</span>

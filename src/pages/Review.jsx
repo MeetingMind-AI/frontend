@@ -22,7 +22,7 @@ const TYPE_META = {
   parking: { label: 'PARKING',  color: 'var(--yellow)',  bg: 'var(--yellow-dim)'  },
 }
 
-function SuggestionCard({ task, onApprove, onReject, onEdit }) {
+function SuggestionCard({ task, onApprove, onReject, onEdit, onToggleTag }) {
   const [editMode, setEditMode] = useState(false)
   const [draft, setDraft] = useState(task.title)
 
@@ -66,6 +66,23 @@ function SuggestionCard({ task, onApprove, onReject, onEdit }) {
         <p className="rv-card-title">{task.title}</p>
       )}
 
+      {onToggleTag && (
+        <div style={{ display: 'flex', gap: '4px', margin: '4px 12px 12px 12px' }}>
+          <button 
+            onClick={() => onToggleTag(task.id, 'technical')}
+            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags?.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: task.tags?.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
+          >
+            Tech
+          </button>
+          <button 
+            onClick={() => onToggleTag(task.id, 'business')}
+            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags?.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: task.tags?.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
+          >
+            Biz
+          </button>
+        </div>
+      )}
+
       <div className="rv-card-actions">
         {editMode ? (
           <>
@@ -100,7 +117,7 @@ function SuggestionCard({ task, onApprove, onReject, onEdit }) {
   )
 }
 
-function ApprovedCard({ task, onUndo }) {
+function ApprovedCard({ task, onUndo, onToggleTag }) {
   return (
     <div className="rv-card rv-card--approved">
       <div className="rv-card-top">
@@ -112,6 +129,23 @@ function ApprovedCard({ task, onUndo }) {
         </svg>
       </div>
       <p className="rv-card-title">{task.title}</p>
+
+      {onToggleTag && (
+        <div style={{ display: 'flex', gap: '4px', margin: '4px 12px 12px 12px' }}>
+          <button 
+            onClick={() => onToggleTag(task.id, 'technical')}
+            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags?.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: task.tags?.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
+          >
+            Tech
+          </button>
+          <button 
+            onClick={() => onToggleTag(task.id, 'business')}
+            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags?.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: task.tags?.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
+          >
+            Biz
+          </button>
+        </div>
+      )}
       <div className="rv-card-actions">
         <button className="rv-card-btn rv-card-btn--undo" onClick={() => onUndo(task.id)}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -151,11 +185,11 @@ function Review() {
     for (const typeGroup of Object.values(proposals)) {
       for (const p of (typeGroup.pending ?? [])) {
         const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : p.action_type === 'blocker' ? 'blocker' : 'todo'
-        items.push({ id: p.id || id++, title: p.content, type, status: 'suggested', meeting })
+        items.push({ id: p.id || id++, title: p.content, type, status: 'suggested', meeting, tags: p.tags || [] })
       }
       for (const p of (typeGroup.accepted ?? [])) {
         const type = p.action_type === 'to_schedule' ? 'schedule' : p.action_type === 'parking_lot' ? 'parking' : p.action_type === 'blocker' ? 'blocker' : 'todo'
-        items.push({ id: p.id || id++, title: p.content, type, status: 'approved', meeting })
+        items.push({ id: p.id || id++, title: p.content, type, status: 'approved', meeting, tags: p.tags || [] })
       }
     }
     return items
@@ -239,6 +273,14 @@ function Review() {
   const editTask = async (id, title) => {
     updateTask(id, { title })
     try { await updateAction(parsedMeetingId, id, undefined, title) } catch {}
+  }
+
+  const toggleTaskTag = async (id, tag) => {
+    const task = tasks.find(t => t.id === id)
+    if (!task) return
+    const newTags = task.tags?.includes(tag) ? task.tags.filter(t => t !== tag) : [...(task.tags || []), tag]
+    updateTask(id, { tags: newTags })
+    try { await updateAction(parsedMeetingId, id, undefined, undefined, undefined, undefined, newTags) } catch {}
   }
 
   const openEmailModal = () => {
@@ -637,7 +679,7 @@ function Review() {
                 </div>
                 <div className="rv-col-cards">
                   {suggestedTasks.map((task) => (
-                    <SuggestionCard key={task.id} task={task} onApprove={approveTask} onReject={rejectTask} onEdit={editTask} />
+                    <SuggestionCard key={task.id} task={task} onApprove={approveTask} onReject={rejectTask} onEdit={editTask} onToggleTag={toggleTaskTag} />
                   ))}
                   {suggestedTasks.length === 0 && (
                     <div className="rv-col-empty">
@@ -657,7 +699,7 @@ function Review() {
                 </div>
                 <div className="rv-col-cards">
                   {approvedTasks.map((task) => (
-                    <ApprovedCard key={task.id} task={task} onUndo={undoTask} />
+                    <ApprovedCard key={task.id} task={task} onUndo={undoTask} onToggleTag={toggleTaskTag} />
                   ))}
                   {approvedTasks.length === 0 && (
                     <div className="rv-col-empty">
@@ -681,7 +723,7 @@ function Review() {
                 </div>
                 <div className="rv-col-cards">
                   {parkingItems.filter((t) => t.status === 'suggested').map((task) => (
-                    <SuggestionCard key={task.id} task={task} onApprove={approveTask} onReject={rejectTask} onEdit={editTask} />
+                    <SuggestionCard key={task.id} task={task} onApprove={approveTask} onReject={rejectTask} onEdit={editTask} onToggleTag={toggleTaskTag} />
                   ))}
                   {parkingItems.filter((t) => t.status === 'suggested').length === 0 && (
                     <div className="rv-col-empty">
@@ -701,7 +743,7 @@ function Review() {
                 </div>
                 <div className="rv-col-cards">
                   {parkingItems.filter((t) => t.status === 'approved').map((task) => (
-                    <ApprovedCard key={task.id} task={task} onUndo={undoTask} />
+                    <ApprovedCard key={task.id} task={task} onUndo={undoTask} onToggleTag={toggleTaskTag} />
                   ))}
                   {parkingItems.filter((t) => t.status === 'approved').length === 0 && (
                     <div className="rv-col-empty">

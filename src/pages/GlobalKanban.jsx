@@ -5,6 +5,33 @@ import { buildKanbanTasks } from '../utils'
 import './GlobalKanban.css'
 
 function TaskCard({ task, members, onRefresh }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(task.title)
+
+  const handleSaveTitle = async () => {
+    setIsEditing(false)
+    if (editTitle === task.title) return
+    let prefix = ''
+    if (task.kanban_status === 'doing') prefix = '[DOING] '
+    else if (task.kanban_status === 'done') prefix = '[DONE] '
+    else if (task.kanban_status === 'todo') prefix = '[TODO] '
+    try {
+      await updateAction(task.meetingId, task.id, undefined, `${prefix}${editTitle}`)
+      onRefresh()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const toggleTag = async (tag) => {
+    const newTags = task.tags.includes(tag) ? task.tags.filter(t => t !== tag) : [...task.tags, tag]
+    try {
+      await updateAction(task.meetingId, task.id, undefined, undefined, undefined, undefined, newTags)
+      onRefresh()
+    } catch (err) {
+      console.error(err)
+    }
+  }
   const handleAssigneeChange = async (e) => {
     const newAssignee = e.target.value ? parseInt(e.target.value) : null
     try {
@@ -42,7 +69,33 @@ function TaskCard({ task, members, onRefresh }) {
   return (
     <div className="gk-card">
       <div className="gk-card-meeting">{task.meeting}</div>
-      <p className="gk-card-title">{task.title}</p>
+      {isEditing ? (
+        <input 
+          value={editTitle} 
+          onChange={e => setEditTitle(e.target.value)} 
+          onBlur={handleSaveTitle}
+          onKeyDown={e => e.key === 'Enter' && handleSaveTitle()}
+          autoFocus
+          style={{ width: '100%', padding: '4px', background: 'var(--bg-input)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px' }}
+        />
+      ) : (
+        <p className="gk-card-title" onClick={() => setIsEditing(true)} style={{ cursor: 'pointer', outline: 'none' }} title="Click to edit">{task.title}</p>
+      )}
+
+      <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+        <button 
+          onClick={() => toggleTag('technical')}
+          style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: task.tags.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
+        >
+          Tech
+        </button>
+        <button 
+          onClick={() => toggleTag('business')}
+          style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: task.tags.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
+        >
+          Biz
+        </button>
+      </div>
       
       <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -97,6 +150,14 @@ export default function GlobalKanban() {
   const [newItemText, setNewItemText] = useState('')
   const [newItemAssignee, setNewItemAssignee] = useState('')
   const [newItemMeeting, setNewItemMeeting] = useState('')
+  const [filterTags, setFilterTags] = useState([])
+
+  const toggleFilter = (tag) => setFilterTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+  
+  const filteredTasks = tasks.filter(t => {
+    if (filterTags.length === 0) return true
+    return filterTags.every(ft => t.tags.includes(ft))
+  })
 
   const loadData = () => {
     getAllActions(teamId)
@@ -140,8 +201,22 @@ export default function GlobalKanban() {
       <header className="gk-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="gk-title">Kanban</h1>
-          <div className="gk-filters">
-            <span className="gk-task-count">{tasks.length} tasks</span>
+          <div className="gk-filters" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span className="gk-task-count">{filteredTasks.length} tasks</span>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button 
+                onClick={() => toggleFilter('technical')}
+                style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: filterTags.includes('technical') ? '#4f8ef7' : 'transparent', color: filterTags.includes('technical') ? '#fff' : 'var(--text-dim)' }}
+              >
+                Tech
+              </button>
+              <button 
+                onClick={() => toggleFilter('business')}
+                style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: filterTags.includes('business') ? '#3fb950' : 'transparent', color: filterTags.includes('business') ? '#fff' : 'var(--text-dim)' }}
+              >
+                Biz
+              </button>
+            </div>
           </div>
         </div>
         <button 
@@ -197,7 +272,7 @@ export default function GlobalKanban() {
 
       <div className="gk-board" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
         {columns.map(col => {
-          const colTasks = tasks.filter(t => t.kanban_status === col.id)
+          const colTasks = filteredTasks.filter(t => t.kanban_status === col.id)
           return (
             <div key={col.id} className="gk-col">
               <div className="gk-col-header">

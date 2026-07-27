@@ -68,7 +68,8 @@ export function buildKanbanTasks(actions) {
       type: 'todo',
       kanban_status: col,
       assignee: p.assignee,
-      status: p.status
+      status: p.status,
+      tags: p.tags || []
     })
   }
   return items
@@ -85,7 +86,8 @@ export function buildParkingLotItems(actions) {
       meeting: formatMeetingTitle(p.meeting_title),
       date: formatDate(p.meeting_date),
       status: 'open',
-      assignee: p.assignee
+      assignee: p.assignee,
+      tags: p.tags || [],
     })
   }
   return items
@@ -102,7 +104,8 @@ export function buildScheduleItems(actions) {
       meeting: formatMeetingTitle(p.meeting_title),
       type: 'schedule',
       schedule_status: 'pending',
-      assignee: p.assignee
+      assignee: p.assignee,
+      tags: p.tags || [],
     })
   }
   return items

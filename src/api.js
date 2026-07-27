@@ -107,6 +107,14 @@ const BASE = import.meta.env.VITE_API_URL ?? ''
     return apiFetch(`/api/teams/${teamId}/members`)
   }
 
+  export async function updateTeamMember(teamId, userId, payload) {
+    return apiFetch(`/api/teams/${teamId}/members/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  }
+
   export async function kickMember(teamId, userId) {
     return apiFetch(`/api/teams/${teamId}/members/${userId}`, { method: 'DELETE' })
   }
@@ -212,9 +220,10 @@ const BASE = import.meta.env.VITE_API_URL ?? ''
     return apiFetch(`/api/actions${qs}`)
   }
 
-  export async function createAction(meetingId, actionType, content, assigneeId = null) {
+  export async function createAction(meetingId, actionType, content, assigneeId = null, tags = null) {
     const body = { action_type: actionType, content }
     if (assigneeId !== null) body.assignee_id = assigneeId
+    if (tags !== null) body.tags = tags
     return apiFetch(`/api/meetings/${meetingId}/actions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -222,12 +231,13 @@ const BASE = import.meta.env.VITE_API_URL ?? ''
     })
   }
 
-  export async function updateAction(meetingId, actionId, status, content, assigneeId = undefined, actionType = undefined) {
+  export async function updateAction(meetingId, actionId, status, content, assigneeId = undefined, actionType = undefined, tags = undefined) {
     const body = {}
     if (status !== undefined) body.status = status
     if (content !== undefined) body.content = content
     if (assigneeId !== undefined) body.assignee_id = assigneeId
     if (actionType !== undefined) body.action_type = actionType
+    if (tags !== undefined) body.tags = tags
     return apiFetch(`/api/meetings/${meetingId}/actions/${actionId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
