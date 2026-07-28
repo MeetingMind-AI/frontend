@@ -210,18 +210,34 @@ function Review() {
   useEffect(() => {
     if (!parsedMeetingId) return
     setLoading(true)
-    Promise.all([getMeeting(parsedMeetingId), getTranscript(parsedMeetingId), getActions(parsedMeetingId)])
-      .then(([meeting, transcript, actions]) => {
-        setMeetingData(meeting)
-        setMeetingTopics(meeting.topics ?? [])
-        setChunks(transcript.chunks ?? [])
-        setProposals(actions)
-        const built = proposalToTasks(actions, meeting.title)
-        if (built.length > 0) setTasks(built)
+    Promise.allSettled([
+      getMeeting(parsedMeetingId),
+      getTranscript(parsedMeetingId),
+      getActions(parsedMeetingId),
+    ])
+      .then(([meetingRes, transcriptRes, actionsRes]) => {
+        if (meetingRes.status === 'fulfilled') {
+          const meeting = meetingRes.value
+          setMeetingData(meeting)
+          setMeetingTopics(meeting.topics ?? [])
+        }
+        if (transcriptRes.status === 'fulfilled') {
+          setChunks(transcriptRes.value.chunks ?? [])
+        }
+        if (actionsRes.status === 'fulfilled') {
+          const actions = actionsRes.value
+          setProposals(actions)
+          const built = proposalToTasks(actions, meetingRes.value?.title)
+          if (built.length > 0) setTasks(built)
+        } else if (meetingRes.status === 'fulfilled') {
+          // No AgentAction rows yet — try to surface tasks from the final report summary JSON
+          console.warn('[Review] getActions failed, falling back to summary JSON tasks')
+        }
       })
       .catch((e) => console.warn('[Review] fetch failed:', e))
       .finally(() => setLoading(false))
   }, [parsedMeetingId])
+
 
   useEffect(() => {
     if (!teamId) return
