@@ -14,7 +14,13 @@ export function parseScrumMaster(raw) {
   if (!raw) return null
   let data = raw
   if (typeof data === 'string') {
-    try { data = JSON.parse(data) } catch { return null }
+    try {
+      let clean = data.trim()
+      if (clean.startsWith('```')) {
+        clean = clean.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '').trim()
+      }
+      data = JSON.parse(clean)
+    } catch { return null }
   }
   return typeof data === 'object' ? data : null
 }
