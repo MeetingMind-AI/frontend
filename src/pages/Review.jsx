@@ -1,3 +1,8 @@
+/**
+ * @file Review.jsx
+ * @description Post-meeting review page. Displays AI-generated meeting summaries, full transcript logs, topic tags, and action item approval/rejection cards.
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getMeeting, getTranscript, getActions, renameMeeting, updateAction, getTopics, addMeetingTopic, removeMeetingTopic } from '../api'
@@ -5,12 +10,19 @@ import { parseScrumMaster, formatMeetingTitle, formatDate } from '../utils'
 import MeetingTopicTags from '../components/MeetingTopicTags'
 import './Review.css'
 
+/**
+ * Returns a consistent speaker avatar color based on name hash.
+ *
+ * @param {string} name - Speaker full name.
+ * @returns {string} Hex color string.
+ */
 function speakerColor(name) {
   const colors = ['#4f8ef7', '#3fb950', '#bc8cff', '#d29922', '#e3884c', '#f85149']
   let hash = 0
   for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff
   return colors[hash % colors.length]
 }
+
 
 function speakerInitials(name) {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase()

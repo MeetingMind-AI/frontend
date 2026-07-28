@@ -1,3 +1,8 @@
+/**
+ * @file Live.jsx
+ * @description Real-time meeting interface for MeetingMind-AI. Connects via WebSockets to display live ASR transcript streaming, multi-agent AI debate insights, and interactive action item proposals.
+ */
+
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -5,9 +10,12 @@ import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateActi
 import MiniPipContent from './MiniPipContent'
 import './Live.css'
 
+/** Label lookup for proposal types. */
 const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE', blocker: 'BLOCKER' }
 
+/** Set of meeting bot status strings considered active/in-progress. */
 const ACTIVE_BOT_STATUSES = new Set(['pending','requested','dispatched','joining','waiting','waiting_admission','active','in_meeting','connected'])
+
 const READY_STATUSES = new Set(['active', 'in_meeting', 'connected'])
 
 const LOADING_STATUS_LABELS = {

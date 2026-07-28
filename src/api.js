@@ -1,39 +1,64 @@
+/**
+ * @file api.js
+ * @description HTTP client SDK and WebSocket client for interacting with the MeetingMind-AI backend REST API.
+ */
+
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
-  function wsBase() {
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${proto}//${window.location.host}`
-  }
+/**
+ * Constructs the WebSocket base URL based on the current window location protocol and host.
+ *
+ * @returns {string} WebSocket URL scheme and host (ws: or wss:).
+ */
+function wsBase() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${window.location.host}`
+}
 
-  function extractError(body, status) {
-    let detail = body.detail
-    if (!detail) return `HTTP ${status}`
-    if (typeof detail === 'string') {
-      try {
-        const inner = JSON.parse(detail)
-        detail = inner.detail ?? inner
-      } catch {}
-    }
-    if (Array.isArray(detail)) {
-      const msg = detail[0]?.msg ?? ''
-      return msg.replace(/^value error,\s*/i, '')
-    }
-    return typeof detail === 'string' ? detail : `HTTP ${status}`
+/**
+ * Extracts human-readable error detail from API error responses.
+ *
+ * @param {Object} body - Parsed JSON response body.
+ * @param {number} status - HTTP status code.
+ * @returns {string} Extracted error message.
+ */
+function extractError(body, status) {
+  let detail = body.detail
+  if (!detail) return `HTTP ${status}`
+  if (typeof detail === 'string') {
+    try {
+      const inner = JSON.parse(detail)
+      detail = inner.detail ?? inner
+    } catch {}
   }
-
-  async function apiFetch(path, options = {}) {
-    const res = await fetch(`${BASE}${path}`, {
-      credentials: 'include',
-      ...options,
-    })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(extractError(body, res.status))
-    }
-    return res.json()
+  if (Array.isArray(detail)) {
+    const msg = detail[0]?.msg ?? ''
+    return msg.replace(/^value error,\s*/i, '')
   }
+  return typeof detail === 'string' ? detail : `HTTP ${status}`
+}
 
-  // ── Auth ─────────────────────────────────────────────────────────────────────
+/**
+ * Wrapper around window.fetch including session credentials and error handling.
+ *
+ * @param {string} path - Relative API endpoint path.
+ * @param {Object} [options={}] - Fetch options.
+ * @returns {Promise<any>} Parsed JSON response.
+ */
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${BASE}${path}`, {
+    credentials: 'include',
+    ...options,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(extractError(body, res.status))
+  }
+  return res.json()
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
 
   export async function getMe() {
     return apiFetch('/api/auth/me')

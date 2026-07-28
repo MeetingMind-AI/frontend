@@ -1,3 +1,8 @@
+/**
+ * @file AppLayout.jsx
+ * @description Main application layout wrapper featuring sidebar navigation, team selector, user menu, and nested route Outlet.
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, Link, Outlet, useParams, useNavigate } from 'react-router-dom'
 import { getMeetings, getTeam, getTeams } from '../api'
@@ -5,6 +10,12 @@ import { useAuth } from '../contexts/AuthContext'
 import { meetingToCard } from '../utils'
 import './AppLayout.css'
 
+/**
+ * Returns a consistent hex color string for a given speaker name.
+ *
+ * @param {string} name - Speaker full name.
+ * @returns {string} Hex color string.
+ */
 function speakerColor(name) {
   const colors = ['#4f8ef7', '#3fb950', '#bc8cff', '#d29922', '#e3884c', '#f85149']
   let hash = 0
@@ -12,10 +23,20 @@ function speakerColor(name) {
   return colors[hash % colors.length]
 }
 
+/**
+ * Generates 1-2 character uppercase initials from a name string.
+ *
+ * @param {string} name - User or team name.
+ * @returns {string} Uppercase initials.
+ */
 function initials(name) {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
+/**
+ * Main AppLayout component.
+ * Renders the top header, sidebar navigation items, team selector dropdown, user avatar menu, and outlet views.
+ */
 export default function AppLayout() {
   const { teamId } = useParams()
   const { user, logout } = useAuth()
@@ -26,6 +47,7 @@ export default function AppLayout() {
   const [allTeams, setAllTeams] = useState([])
   const [showUserMenu, setShowUserMenu] = useState(false)
   const userMenuRef = useRef(null)
+
 
   useEffect(() => {
     getMeetings(teamId)

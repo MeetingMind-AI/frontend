@@ -1,3 +1,8 @@
+/**
+ * @file App.jsx
+ * @description Main application routing layout and authentication guard configuration for MeetingMind-AI.
+ */
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import AppLayout from './layouts/AppLayout'
@@ -13,6 +18,13 @@ import Settings from './pages/Settings'
 import JoinTeam from './pages/JoinTeam'
 import MiniPopup from './pages/MiniPopup'
 
+/**
+ * Route guard component that restricts access to authenticated users.
+ * Redirects unauthenticated users to the /login page.
+ *
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Protected child route elements
+ */
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
   if (user === undefined) return null
@@ -20,6 +32,13 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+/**
+ * Route guard component for public pages (e.g. Login).
+ * Redirects authenticated users away from public pages to /teams.
+ *
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Public child route elements
+ */
 function PublicRoute({ children }) {
   const { user } = useAuth()
   if (user === undefined) return null
@@ -27,6 +46,10 @@ function PublicRoute({ children }) {
   return children
 }
 
+/**
+ * Main application routing declaration.
+ * Defines public, team-scoped, live meeting, and review routes.
+ */
 function AppRoutes() {
   return (
     <Routes>
@@ -49,6 +72,9 @@ function AppRoutes() {
   )
 }
 
+/**
+ * Root React App component wrapped with AuthProvider context.
+ */
 export default function App() {
   return (
     <AuthProvider>
@@ -56,3 +82,4 @@ export default function App() {
     </AuthProvider>
   )
 }
+

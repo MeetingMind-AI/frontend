@@ -1,5 +1,15 @@
-// Parses the scrum_master field from Meeting.summary — Ollama stores it as
-// a raw JSON string inside the JSONB column, so we need to unwrap it.
+/**
+ * @file utils.js
+ * @description Data transformation and formatting utilities for MeetingMind-AI frontend cards, Kanban items, and meeting metadata.
+ */
+
+/**
+ * Parses the scrum_master field from Meeting.summary.
+ * Ollama stores summary data as a raw JSON string inside the JSONB column, requiring unwrapping.
+ *
+ * @param {string|Object} raw - Raw scrum_master payload from database.
+ * @returns {Object|null} Parsed object if valid, or null.
+ */
 export function parseScrumMaster(raw) {
   if (!raw) return null
   let data = raw
@@ -9,18 +19,34 @@ export function parseScrumMaster(raw) {
   return typeof data === 'object' ? data : null
 }
 
-// Strip the platform prefix from the DB title ("google_meet:abc-defg-hij" -> "abc-defg-hij")
+/**
+ * Strips the platform prefix from DB meeting title ("google_meet:abc-defg-hij" -> "abc-defg-hij").
+ *
+ * @param {string} title - Raw meeting title string with optional platform prefix.
+ * @returns {string} Formatted clean title string.
+ */
 export function formatMeetingTitle(title) {
   if (!title) return 'Unknown Meeting'
   return title.includes(':') ? title.split(':').slice(1).join(':') : title
 }
 
+/**
+ * Formats ISO timestamp into short date representation (e.g. "Jul 28, 2026").
+ *
+ * @param {string} iso - ISO date string.
+ * @returns {string} Formatted locale date string.
+ */
 export function formatDate(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-// Map a raw meeting object from GET /api/meetings into the shape Dashboard cards expect
+/**
+ * Maps a raw meeting object from GET /api/meetings into the data shape expected by Dashboard cards.
+ *
+ * @param {Object} m - Raw meeting record from API backend.
+ * @returns {Object} Structured card object for Dashboard display.
+ */
 export function meetingToCard(m) {
   const sm = parseScrumMaster(m.summary?.scrum_master)
   let durationDisplay = m.status
@@ -39,10 +65,21 @@ export function meetingToCard(m) {
   }
 }
 
+/**
+ * Helper to build display string for action items.
+ *
+ * @param {string|Object} t - Task string or task object.
+ * @returns {string} Text label.
+ */
 const itemLabel = (t) =>
   typeof t === 'string' ? t : `${t.task ?? ''}${t.owner ? ` (${t.owner})` : ''}`
 
-// Build GlobalKanban task entries from all actions
+/**
+ * Builds GlobalKanban task entries from aggregated team action items.
+ *
+ * @param {Object} actions - Aggregated action items from API endpoint.
+ * @returns {Array<Object>} List of formatted task objects for Kanban columns.
+ */
 export function buildKanbanTasks(actions) {
   const items = []
   for (const p of (actions.to_do?.accepted ?? [])) {
@@ -75,7 +112,12 @@ export function buildKanbanTasks(actions) {
   return items
 }
 
-// Build GlobalParkingLot entries from all actions
+/**
+ * Builds GlobalParkingLot entries from aggregated team action items.
+ *
+ * @param {Object} actions - Aggregated action items from API endpoint.
+ * @returns {Array<Object>} List of formatted parking lot item objects.
+ */
 export function buildParkingLotItems(actions) {
   const items = []
   for (const p of (actions.parking_lot?.accepted ?? [])) {
@@ -93,7 +135,12 @@ export function buildParkingLotItems(actions) {
   return items
 }
 
-// Build GlobalSchedule entries from all actions
+/**
+ * Builds GlobalSchedule entries from aggregated team action items.
+ *
+ * @param {Object} actions - Aggregated action items from API endpoint.
+ * @returns {Array<Object>} List of formatted schedule item objects.
+ */
 export function buildScheduleItems(actions) {
   const items = []
   for (const p of (actions.to_schedule?.accepted ?? [])) {
@@ -110,3 +157,4 @@ export function buildScheduleItems(actions) {
   }
   return items
 }
+

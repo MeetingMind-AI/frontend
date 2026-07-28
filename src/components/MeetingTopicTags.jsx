@@ -1,6 +1,22 @@
+/**
+ * @file MeetingTopicTags.jsx
+ * @description Component for displaying, adding, and removing meeting topic chips and dropdown menus.
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import './MeetingTopicTags.css'
 
+/**
+ * TopicDropdown component.
+ * Displays a dropdown list of available team topics allowing users to toggle topic assignments.
+ *
+ * @param {Object} props - Component props.
+ * @param {Array<Object>} props.teamTopics - List of team topics.
+ * @param {Array<Object>} props.meetingTopics - List of topics currently assigned to the meeting.
+ * @param {Function} props.onAdd - Callback when adding a topic.
+ * @param {Function} props.onRemove - Callback when removing a topic.
+ * @param {boolean} [props.dropUp=false] - Whether dropdown should open upwards.
+ */
 function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove, dropUp }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -55,6 +71,17 @@ function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove, dropUp }) {
   )
 }
 
+/**
+ * Main MeetingTopicTags component.
+ * Renders topic chips with remove buttons and the TopicDropdown selector.
+ *
+ * @param {Object} props - Component props.
+ * @param {Array<Object>} props.meetingTopics - Currently assigned topics.
+ * @param {Array<Object>} props.teamTopics - All available team topics.
+ * @param {Function} props.onAdd - Add topic handler.
+ * @param {Function} props.onRemove - Remove topic handler.
+ * @param {boolean} [props.dropUp=false] - Open direction flag for dropdown.
+ */
 export default function MeetingTopicTags({ meetingTopics, teamTopics, onAdd, onRemove, dropUp = false }) {
   if (meetingTopics.length === 0 && teamTopics.length === 0) return null
 
@@ -86,3 +113,4 @@ export default function MeetingTopicTags({ meetingTopics, teamTopics, onAdd, onR
     </>
   )
 }
+

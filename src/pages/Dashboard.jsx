@@ -1,3 +1,8 @@
+/**
+ * @file Dashboard.jsx
+ * @description Team meeting dashboard view allowing users to launch meeting bots, view active/past meetings, edit topics, and access review pages.
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { startMeeting, getMeetings, renameMeeting, deleteMeeting, getTopics, addMeetingTopic, removeMeetingTopic } from '../api'
@@ -5,6 +10,12 @@ import { meetingToCard } from '../utils'
 import MeetingTopicTags from '../components/MeetingTopicTags'
 import './Dashboard.css'
 
+/**
+ * Parses Microsoft Teams join URLs or meeting IDs to extract native ID and optional passcode.
+ *
+ * @param {string} raw - Raw input URL or ID string.
+ * @returns {Object|null} Object containing nativeId and passcode, or null if invalid.
+ */
 function parseTeamsUrl(raw) {
   const trimmed = raw.trim()
   const passcodeMatch = trimmed.match(/[?&]p=([^&\s#]+)/i)
@@ -31,6 +42,12 @@ function parseTeamsUrl(raw) {
   return null
 }
 
+/**
+ * Fallback helper to extract trailing path segment as native meeting ID from URL string.
+ *
+ * @param {string} url - Meeting URL string.
+ * @returns {string|null} Native ID string.
+ */
 function extractNativeId(url) {
   try {
     return new URL(url).pathname.split('/').filter(Boolean).pop() || null

@@ -1,12 +1,27 @@
+/**
+ * @file GlobalKanban.jsx
+ * @description Global Kanban board page for managing team-wide action items across To Do, Doing, and Done columns.
+ */
+
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getAllActions, getMembers, getMeetings, createAction, updateAction } from '../api'
 import { buildKanbanTasks } from '../utils'
 import './GlobalKanban.css'
 
+/**
+ * TaskCard component representing an individual Kanban task item.
+ * Supports inline title editing, assignee selection, tag management, and column movement.
+ *
+ * @param {Object} props - Component props.
+ * @param {Object} props.task - Task data object.
+ * @param {Array<Object>} props.members - List of team members for assignee dropdown.
+ * @param {Function} props.onRefresh - Callback to refresh parent board state.
+ */
 function TaskCard({ task, members, onRefresh }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(task.title)
+
 
   const handleSaveTitle = async () => {
     setIsEditing(false)
