@@ -207,6 +207,65 @@ function Review() {
     return items
   }
 
+  function summaryToTasks(meeting) {
+    if (!meeting?.summary?.scrum_master) return []
+    const sm = parseScrumMaster(meeting.summary.scrum_master)
+    if (!sm) return []
+    const items = []
+    let id = 10000
+    const title = formatMeetingTitle(meeting.title)
+
+    if (Array.isArray(sm.to_do)) {
+      for (const item of sm.to_do) {
+        const text = typeof item === 'string' ? item : (item.task || item.description || item.content || '')
+        if (text) {
+          items.push({
+            id: item.id || id++,
+            title: text,
+            type: 'todo',
+            status: 'suggested',
+            meeting: title,
+            tags: item.tags || []
+          })
+        }
+      }
+    }
+
+    if (Array.isArray(sm.pending_to_schedule)) {
+      for (const item of sm.pending_to_schedule) {
+        const text = typeof item === 'string' ? item : (item.task || item.description || item.content || '')
+        if (text) {
+          items.push({
+            id: item.id || id++,
+            title: text,
+            type: 'schedule',
+            status: 'suggested',
+            meeting: title,
+            tags: item.tags || []
+          })
+        }
+      }
+    }
+
+    if (Array.isArray(sm.parking_lot)) {
+      for (const item of sm.parking_lot) {
+        const text = typeof item === 'string' ? item : (item.task || item.description || item.content || '')
+        if (text) {
+          items.push({
+            id: item.id || id++,
+            title: text,
+            type: 'parking',
+            status: 'suggested',
+            meeting: title,
+            tags: item.tags || []
+          })
+        }
+      }
+    }
+
+    return items
+  }
+
   useEffect(() => {
     if (!parsedMeetingId) return
     setLoading(true)
@@ -216,10 +275,11 @@ function Review() {
       getActions(parsedMeetingId),
     ])
       .then(([meetingRes, transcriptRes, actionsRes]) => {
+        let fetchedMeeting = null
         if (meetingRes.status === 'fulfilled') {
-          const meeting = meetingRes.value
-          setMeetingData(meeting)
-          setMeetingTopics(meeting.topics ?? [])
+          fetchedMeeting = meetingRes.value
+          setMeetingData(fetchedMeeting)
+          setMeetingTopics(fetchedMeeting.topics ?? [])
         }
         if (transcriptRes.status === 'fulfilled') {
           setChunks(transcriptRes.value.chunks ?? [])
@@ -227,11 +287,16 @@ function Review() {
         if (actionsRes.status === 'fulfilled') {
           const actions = actionsRes.value
           setProposals(actions)
-          const built = proposalToTasks(actions, meetingRes.value?.title)
-          if (built.length > 0) setTasks(built)
-        } else if (meetingRes.status === 'fulfilled') {
-          // No AgentAction rows yet — try to surface tasks from the final report summary JSON
-          console.warn('[Review] getActions failed, falling back to summary JSON tasks')
+          const built = proposalToTasks(actions, fetchedMeeting?.title)
+          if (built.length > 0) {
+            setTasks(built)
+          } else if (fetchedMeeting) {
+            const fallback = summaryToTasks(fetchedMeeting)
+            if (fallback.length > 0) setTasks(fallback)
+          }
+        } else if (fetchedMeeting) {
+          const fallback = summaryToTasks(fetchedMeeting)
+          if (fallback.length > 0) setTasks(fallback)
         }
       })
       .catch((e) => console.warn('[Review] fetch failed:', e))
@@ -279,7 +344,12 @@ function Review() {
             .then((actions) => {
               setProposals(actions)
               const built = proposalToTasks(actions, meeting.title)
-              if (built.length > 0) setTasks(built)
+              if (built.length > 0) {
+                setTasks(built)
+              } else {
+                const fallback = summaryToTasks(meeting)
+                if (fallback.length > 0) setTasks(fallback)
+              }
             })
             .catch(() => {})
         }
