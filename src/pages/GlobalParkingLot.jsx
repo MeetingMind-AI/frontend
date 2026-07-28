@@ -29,7 +29,7 @@ function ParkingCard({ item, members, onRefresh }) {
       console.error(err)
     }
   }
-  const [promoting, setPromoting] = useState(false)
+
 
   const handlePromote = async () => {
     setPromoting(true)
