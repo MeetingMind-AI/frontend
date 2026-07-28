@@ -124,8 +124,9 @@ export default function GlobalParkingLot() {
     if (teamId) {
       getMembers(teamId).then(setMembers).catch(() => {})
       getMeetings(teamId).then(data => {
-        setMeetings(data)
-        if (data.length > 0) setNewItemMeeting(data[0].id)
+        const meets = data.meetings || []
+        setMeetings(meets)
+        if (meets.length > 0) setNewItemMeeting(meets[0].id)
       }).catch(() => {})
     }
   }, [teamId])
