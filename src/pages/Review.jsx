@@ -254,11 +254,24 @@ function Review() {
         if (meeting.summary) {
           clearInterval(t)
           setMeetingData(meeting)
+          // Also reload transcript and actions — finalization runs async after leave,
+          // so these may have been updated (or restored) by the time the summary exists.
+          getTranscript(parsedMeetingId)
+            .then((tr) => setChunks(tr.chunks ?? []))
+            .catch(() => {})
+          getActions(parsedMeetingId)
+            .then((actions) => {
+              setProposals(actions)
+              const built = proposalToTasks(actions, meeting.title)
+              if (built.length > 0) setTasks(built)
+            })
+            .catch(() => {})
         }
       } catch {}
     }, 5000)
     return () => clearInterval(t)
   }, [parsedMeetingId, meetingData?.status])
+
 
   const taskItems     = tasks.filter((t) => t.type === 'todo')
   const scheduleItems = tasks.filter((t) => t.type === 'schedule')

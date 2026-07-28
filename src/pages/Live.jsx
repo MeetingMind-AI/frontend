@@ -92,7 +92,21 @@ function Live() {
   useEffect(() => {
     if (!parsedMeetingId) return
     const ws = openInsightSocket(parsedMeetingId, {
-      onOpen: () => setWsStatus('connected'),
+      onOpen: () => {
+        setWsStatus('connected')
+        // Catch up on proposals that were generated before the WS connected
+        getActions(parsedMeetingId)
+          .then((data) => {
+            const pending = Object.values(data).flatMap((t) => t.pending ?? [])
+            if (pending.length > 0) {
+              setPendingProposals(pending)
+              const latest = pending[pending.length - 1]
+              setToastProposal(latest)
+              playProposalSound(latest.type)
+            }
+          })
+          .catch(() => {})
+      },
       onClose: () => setWsStatus('disconnected'),
       onChunksSnapshot: (chunks) => {
         setTranscript(chunks.map(mapChunk))
