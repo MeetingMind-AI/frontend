@@ -89,7 +89,7 @@ export default function Settings() {
 
   useEffect(() => {
     getTeam(teamId).then((t) => { setTeam(t); setTeamName(t.name) }).catch(() => {})
-    getMembers(teamId).then((data) => setMembers(data.members ?? [])).catch(() => {})
+    getMembers(teamId).then((data) => setMembers(data || [])).catch(() => {})
     getTopics(teamId).then((data) => setTopics(data.topics ?? [])).catch(() => {})
   }, [teamId])
 

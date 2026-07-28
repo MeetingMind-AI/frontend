@@ -51,7 +51,7 @@ export default function AppLayout() {
 
   useEffect(() => {
     getMeetings(teamId)
-      .then((data) => setRecentMeetings((data.meetings ?? []).map(meetingToCard)))
+      .then((data) => setRecentMeetings((data || []).map(meetingToCard)))
       .catch(() => {})
   }, [teamId])
 

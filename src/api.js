@@ -129,7 +129,8 @@ async function apiFetch(path, options = {}) {
   }
 
   export async function getMembers(teamId) {
-    return apiFetch(`/api/teams/${teamId}/members`)
+    const data = await apiFetch(`/api/teams/${teamId}/members`)
+    return data.members || []
   }
 
   export async function updateTeamMember(teamId, userId, payload) {
@@ -214,8 +215,9 @@ async function apiFetch(path, options = {}) {
   }
 
   export async function getMeetings(teamId = null) {
-    const qs = teamId != null ? `?team_id=${teamId}` : ''
-    return apiFetch(`/api/meetings${qs}`)
+    const query = teamId ? `?team_id=${teamId}` : ''
+    const data = await apiFetch(`/api/meetings${query}`)
+    return data.meetings || []
   }
 
   export async function getMeeting(meetingId) {

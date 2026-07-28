@@ -259,7 +259,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     getMeetings(teamId)
-      .then((data) => setMeetings((data.meetings ?? []).map(meetingToCard)))
+      .then((data) => setMeetings((data || []).map(meetingToCard)))
       .catch((e) => console.warn('[Dashboard] fetch failed:', e))
     getTopics(teamId)
       .then((data) => setTeamTopics(data.topics ?? []))
