@@ -86,6 +86,7 @@ function Live() {
     text: c.text,
     timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     role: '',
+    is_final: c.is_final !== undefined ? c.is_final : true,
   })
 
 
@@ -114,7 +115,14 @@ function Live() {
       onChunk: (chunk) => {
         setTranscript((prev) => {
           if (prev === null) return null
-          return [...prev, mapChunk(chunk)]
+          const mapped = mapChunk(chunk)
+          const idx = prev.findIndex((c) => c.id === mapped.id)
+          if (idx >= 0) {
+            const next = [...prev]
+            next[idx] = mapped
+            return next
+          }
+          return [...prev, mapped]
         })
       },
       onProposal: (proposal) => {
@@ -510,7 +518,7 @@ function Live() {
                         <span className="live-msg-time">{msg.timestamp}</span>
                       </div>
                     )}
-                    <div className="live-msg-text">{msg.text}</div>
+                    <div className="live-msg-text" style={{ color: msg.is_final ? 'inherit' : 'var(--text-3)' }}>{msg.text}</div>
                   </div>
                 </div>
               )
