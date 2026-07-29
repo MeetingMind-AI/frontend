@@ -192,7 +192,7 @@ function Live() {
       if (last?.status === botStatus) return prev
       return [...prev, { status: botStatus }]
     })
-    if (READY_STATUSES.has(botStatus)) {
+    if (READY_STATUSES.has(botStatus) || botStatus === 'completed' || botStatus === 'failed') {
       setLoadingPhase('fading')
       const t = setTimeout(() => setLoadingPhase('done'), 700)
       return () => clearTimeout(t)
