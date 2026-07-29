@@ -258,17 +258,23 @@ async function apiFetch(path, options = {}) {
     })
   }
 
-  export async function updateAction(meetingId, actionId, status, content, assigneeId = undefined, actionType = undefined, tags = undefined) {
-    const body = {}
-    if (status !== undefined) body.status = status
-    if (content !== undefined) body.content = content
-    if (assigneeId !== undefined) body.assignee_id = assigneeId
-    if (actionType !== undefined) body.action_type = actionType
-    if (tags !== undefined) body.tags = tags
+  export async function updateAction(meetingId, actionId, status, content, assigneeId, actionType, tags) {
+    const payload = {}
+    if (status !== undefined) payload.status = status
+    if (content !== undefined) payload.content = content
+    if (assigneeId !== undefined) payload.assignee_id = assigneeId
+    if (actionType !== undefined) payload.action_type = actionType
+    if (tags !== undefined) payload.tags = tags
     return apiFetch(`/api/meetings/${meetingId}/actions/${actionId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
+    })
+  }
+
+  export async function deleteAction(meetingId, actionId) {
+    return apiFetch(`/api/meetings/${meetingId}/actions/${actionId}`, {
+      method: 'DELETE',
     })
   }
 

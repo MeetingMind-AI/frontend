@@ -250,6 +250,29 @@
   text-overflow: ellipsis;
 }
 
+.gk-card-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  opacity: 0;
+}
+
+.gk-card:hover .gk-card-delete-btn {
+  opacity: 1;
+}
+
+.gk-card-delete-btn:hover {
+  background: var(--red-dim);
+  color: var(--red);
+}
+
 .gk-card-title {
   font-size: 13px;
   color: var(--text-1);

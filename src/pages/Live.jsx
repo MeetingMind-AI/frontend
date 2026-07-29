@@ -96,17 +96,29 @@ function Live() {
       onOpen: () => {
         setWsStatus('connected')
         // Catch up on proposals that were generated before the WS connected
-        getActions(parsedMeetingId)
-          .then((data) => {
-            const pending = Object.values(data).flatMap((t) => t.pending ?? [])
-            if (pending.length > 0) {
-              setPendingProposals(pending)
-              const latest = pending[pending.length - 1]
-              setToastProposal(latest)
-              playProposalSound(latest.type)
-            }
-          })
-          .catch(() => {})
+        getActions(parsedMeetingId).then((actions) => {
+          const allPending = [
+            ...(actions.to_do?.pending ?? []),
+            ...(actions.parking_lot?.pending ?? []),
+            ...(actions.to_schedule?.pending ?? []),
+            ...(actions.blockers?.pending ?? []),
+          ].map(p => ({ ...p, type: p.type || p.action_type }))
+          setPendingProposals(allPending)
+          
+          const allAccepted = [
+            ...(actions.to_do?.accepted ?? []),
+            ...(actions.parking_lot?.accepted ?? []),
+            ...(actions.to_schedule?.accepted ?? []),
+            ...(actions.blockers?.accepted ?? []),
+          ].map(p => ({ ...p, type: p.type || p.action_type }))
+          setAcceptedProposals(allAccepted)
+          
+          if (allPending.length > 0) {
+            const latest = allPending[allPending.length - 1]
+            setToastProposal(latest)
+            playProposalSound(latest.type)
+          }
+        })
       },
       onClose: () => setWsStatus('disconnected'),
       onChunksSnapshot: (chunks) => {
