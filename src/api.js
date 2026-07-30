@@ -290,6 +290,18 @@ async function apiFetch(path, options = {}) {
     return apiFetch(`/api/meetings/${meetingId}`, { method: 'DELETE' })
   }
 
+  export async function getEmailPreview(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}/email-preview`)
+  }
+
+  export async function sendMeetingEmail(meetingId, recipientIds) {
+    return apiFetch(`/api/meetings/${meetingId}/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient_ids: recipientIds }),
+    })
+  }
+
   // ── WebSocket ─────────────────────────────────────────────────────────────────
 
   export function openInsightSocket(meetingId, { onChunk, onChunksSnapshot, onInsight, onProposal, onOpen, onClose } = {}) {
