@@ -67,6 +67,15 @@ function TaskCard({ task, members, onRefresh }) {
     }
   }
 
+  const handleArchive = async () => {
+    try {
+      await updateAction(task.meetingId, task.id, 'archived')
+      onRefresh()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const handleMove = async (dir) => {
     let newStatus = ''
     if (task.kanban_status === 'todo' && dir === 'forward') newStatus = 'doing'
@@ -95,12 +104,21 @@ function TaskCard({ task, members, onRefresh }) {
     <div className="gk-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="gk-card-meeting">{task.meeting}</div>
-        <button onClick={handleDelete} className="gk-card-delete-btn" title="Delete Task">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button onClick={handleArchive} className="gk-card-delete-btn" title="Archive Task">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="21 8 21 21 3 21 3 8" />
+              <rect x="1" y="3" width="22" height="5" />
+              <line x1="10" y1="12" x2="14" y2="12" />
+            </svg>
+          </button>
+          <button onClick={handleDelete} className="gk-card-delete-btn" title="Delete Task">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
       </div>
       {isEditing ? (
         <input 

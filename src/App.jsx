@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 import GlobalKanban from './pages/GlobalKanban'
 import GlobalParkingLot from './pages/GlobalParkingLot'
 import GlobalSchedule from './pages/GlobalSchedule'
+import GlobalArchive from './pages/GlobalArchive'
 import Live from './pages/Live'
 import Review from './pages/Review'
 import Login from './pages/Login'
@@ -61,6 +62,7 @@ function AppRoutes() {
         <Route path="kanban" element={<GlobalKanban />} />
         <Route path="parking-lot" element={<GlobalParkingLot />} />
         <Route path="schedule" element={<GlobalSchedule />} />
+        <Route path="archive" element={<GlobalArchive />} />
         <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="/teams/:teamId/live/:meetingId" element={<ProtectedRoute><Live /></ProtectedRoute>} />

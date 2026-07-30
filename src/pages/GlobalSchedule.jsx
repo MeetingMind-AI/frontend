@@ -20,6 +20,15 @@ function ScheduleRow({ item, members, onRefresh }) {
     }
   }
 
+  const handleArchive = async () => {
+    try {
+      await updateAction(item.meetingId, item.id, 'archived')
+      onRefresh()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   return (
     <div className="gk-schedule-row">
       <div className="gk-schedule-row-left">
@@ -41,7 +50,13 @@ function ScheduleRow({ item, members, onRefresh }) {
             {item.assignee && <span style={{ marginLeft: '12px' }}>Assigned: {item.assignee.name}</span>}
           </div>
         </div>
-        <div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            onClick={handleArchive} 
+            style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px' }}
+          >
+            Archive
+          </button>
           <input 
             type="date" 
             value={targetDate} 

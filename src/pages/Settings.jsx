@@ -120,19 +120,13 @@ export default function Settings() {
     }
   }
 
-  const handleUpdateMember = async (userId, role, tags) => {
+  const handleUpdateMember = async (userId, role) => {
     try {
-      const updatedUser = await updateTeamMember(teamId, userId, { role, notification_tags: tags })
+      const updatedUser = await updateTeamMember(teamId, userId, { role })
       setMembers((prev) => prev.map((m) => m.id === userId ? updatedUser : m))
     } catch (err) {
       alert(err.message)
     }
-  }
-
-  const toggleNotificationTag = (member, tag) => {
-    const tags = member.notification_tags || []
-    const newTags = tags.includes(tag) ? tags.filter(t => t !== tag) : [...tags, tag]
-    handleUpdateMember(member.id, member.role, newTags)
   }
 
   const handleGetInvite = async () => {
@@ -314,30 +308,13 @@ export default function Settings() {
                             <select
                               value={m.role || 'member'}
                               disabled={!isOwner}
-                              onChange={(e) => handleUpdateMember(m.id, e.target.value, m.notification_tags)}
+                              onChange={(e) => handleUpdateMember(m.id, e.target.value)}
                               style={{ marginLeft: '4px', fontSize: '12px' }}
                             >
                               <option value="member">Member</option>
                               <option value="admin">Admin</option>
                             </select>
                           </label>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ color: 'var(--text-2)' }}>Notifications:</span>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                              <input
-                                type="checkbox"
-                                checked={(m.notification_tags || []).includes('technical')}
-                                onChange={() => toggleNotificationTag(m, 'technical')}
-                              /> Technical
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                              <input
-                                type="checkbox"
-                                checked={(m.notification_tags || []).includes('business')}
-                                onChange={() => toggleNotificationTag(m, 'business')}
-                              /> Business
-                            </label>
-                          </div>
                         </div>
                       )}
                     </div>

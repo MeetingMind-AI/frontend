@@ -164,3 +164,26 @@ export function buildScheduleItems(actions) {
   return items
 }
 
+export function buildArchiveItems(actions) {
+  const items = []
+  const sources = [
+    { list: actions.to_do?.archived ?? [], type: 'todo' },
+    { list: actions.parking_lot?.archived ?? [], type: 'parking_lot' },
+    { list: actions.to_schedule?.archived ?? [], type: 'schedule' }
+  ]
+  for (const { list, type } of sources) {
+    for (const p of list) {
+      items.push({
+        id: p.id,
+        meetingId: p.meeting_id,
+        title: p.content,
+        meeting: formatMeetingTitle(p.meeting_title),
+        date: formatDate(p.meeting_date),
+        action_type: type,
+        assignee: p.assignee,
+        tags: p.tags || [],
+      })
+    }
+  }
+  return items
+}

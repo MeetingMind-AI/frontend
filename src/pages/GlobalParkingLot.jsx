@@ -37,8 +37,16 @@ function ParkingCard({ item, members, onRefresh }) {
       await updateAction(item.meetingId, item.id, undefined, undefined, undefined, 'to_do')
       onRefresh()
     } catch (err) {
-      console.error(err)
       setPromoting(false)
+    }
+  }
+
+  const handleArchive = async () => {
+    try {
+      await updateAction(item.meetingId, item.id, 'archived')
+      onRefresh()
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -81,13 +89,21 @@ function ParkingCard({ item, members, onRefresh }) {
             <span className="pl-item-meeting" style={{ marginRight: '8px' }}>{item.meeting}</span>
             <span className="pl-item-date">{item.date}</span>
           </div>
-          <button 
-            onClick={handlePromote} 
-            disabled={promoting}
-            style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', background: 'var(--accent)', color: 'black', border: 'none', borderRadius: '4px' }}
-          >
-            {promoting ? 'Promoting...' : 'Promote to Task'}
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              onClick={handleArchive} 
+              style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px' }}
+            >
+              Archive
+            </button>
+            <button 
+              onClick={handlePromote} 
+              disabled={promoting}
+              style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', background: 'var(--accent)', color: 'black', border: 'none', borderRadius: '4px' }}
+            >
+              {promoting ? 'Promoting...' : 'Promote to Task'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
