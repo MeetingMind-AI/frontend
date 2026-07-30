@@ -32,6 +32,7 @@ const TYPE_META = {
   todo:    { label: 'TODO',     color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
   schedule:{ label: 'SCHEDULE', color: 'var(--purple)',  bg: 'var(--purple-dim)'  },
   parking: { label: 'PARKING',  color: 'var(--yellow)',  bg: 'var(--yellow-dim)'  },
+  blocker: { label: 'BLOCKER',  color: 'var(--red)',     bg: 'var(--red-dim)'     },
 }
 
 function SuggestionCard({ task, onApprove, onReject, onEdit, onToggleTag }) {
@@ -82,13 +83,13 @@ function SuggestionCard({ task, onApprove, onReject, onEdit, onToggleTag }) {
         <div style={{ display: 'flex', gap: '4px', margin: '4px 12px 12px 12px' }}>
           <button 
             onClick={() => onToggleTag(task.id, 'technical')}
-            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags?.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: task.tags?.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
+            className={`rv-tag-btn rv-tag-btn--tech ${task.tags?.includes('technical') ? 'rv-tag-btn--active' : ''}`}
           >
             Tech
           </button>
           <button 
             onClick={() => onToggleTag(task.id, 'business')}
-            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags?.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: task.tags?.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
+            className={`rv-tag-btn rv-tag-btn--biz ${task.tags?.includes('business') ? 'rv-tag-btn--active' : ''}`}
           >
             Biz
           </button>
@@ -146,13 +147,13 @@ function ApprovedCard({ task, onUndo, onToggleTag }) {
         <div style={{ display: 'flex', gap: '4px', margin: '4px 12px 12px 12px' }}>
           <button 
             onClick={() => onToggleTag(task.id, 'technical')}
-            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags?.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: task.tags?.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
+            className={`rv-tag-btn rv-tag-btn--tech ${task.tags?.includes('technical') ? 'rv-tag-btn--active' : ''}`}
           >
             Tech
           </button>
           <button 
             onClick={() => onToggleTag(task.id, 'business')}
-            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags?.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: task.tags?.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
+            className={`rv-tag-btn rv-tag-btn--biz ${task.tags?.includes('business') ? 'rv-tag-btn--active' : ''}`}
           >
             Biz
           </button>
@@ -190,6 +191,7 @@ function Review() {
   const [emailHtml, setEmailHtml] = useState(null)
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailExpanded, setEmailExpanded] = useState(false)
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false)
   const [teamMembers, setTeamMembers] = useState([])
   const [selectedMemberIds, setSelectedMemberIds] = useState([])
   const [showRecipientPicker, setShowRecipientPicker] = useState(false)
@@ -362,7 +364,7 @@ function Review() {
             })
             .catch(() => {})
         }
-      } catch {}
+      } catch (e) { console.warn(e) }
     }, 5000)
     return () => clearInterval(t)
   }, [parsedMeetingId, meetingData?.status])
@@ -380,19 +382,19 @@ function Review() {
 
   const approveTask = async (id) => {
     updateTask(id, { status: 'approved' })
-    try { await updateAction(parsedMeetingId, id, 'accepted') } catch {}
+    try { await updateAction(parsedMeetingId, id, 'accepted') } catch (e) { console.warn(e) }
   }
   const rejectTask = async (id) => {
     setTasks((prev) => prev.filter((t) => t.id !== id))
-    try { await updateAction(parsedMeetingId, id, 'rejected') } catch {}
+    try { await updateAction(parsedMeetingId, id, 'rejected') } catch (e) { console.warn(e) }
   }
   const undoTask = async (id) => {
     updateTask(id, { status: 'suggested' })
-    try { await updateAction(parsedMeetingId, id, 'pending') } catch {}
+    try { await updateAction(parsedMeetingId, id, 'pending') } catch (e) { console.warn(e) }
   }
   const editTask = async (id, title) => {
     updateTask(id, { title })
-    try { await updateAction(parsedMeetingId, id, undefined, title) } catch {}
+    try { await updateAction(parsedMeetingId, id, undefined, title) } catch (e) { console.warn(e) }
   }
 
   const toggleTaskTag = async (id, tag) => {
@@ -400,7 +402,7 @@ function Review() {
     if (!task) return
     const newTags = task.tags?.includes(tag) ? task.tags.filter(t => t !== tag) : [...(task.tags || []), tag]
     updateTask(id, { tags: newTags })
-    try { await updateAction(parsedMeetingId, id, undefined, undefined, undefined, undefined, newTags) } catch {}
+    try { await updateAction(parsedMeetingId, id, undefined, undefined, undefined, undefined, newTags) } catch (e) { console.warn(e) }
   }
 
   useEffect(() => {
@@ -467,7 +469,7 @@ function Review() {
                   if (e.key === 'Enter') {
                     const t = titleDraft.trim()
                     if (t && t !== formatMeetingTitle(meetingData.title)) {
-                      try { await renameMeeting(meetingData.id, t); setMeetingData((prev) => ({ ...prev, title: t })) } catch {}
+                      try { await renameMeeting(meetingData.id, t); setMeetingData((prev) => ({ ...prev, title: t })) } catch (e) { console.warn(e) }
                     }
                     setTitleEditing(false)
                   }
@@ -476,7 +478,7 @@ function Review() {
                 onBlur={async () => {
                   const t = titleDraft.trim()
                   if (t && t !== formatMeetingTitle(meetingData.title)) {
-                    try { await renameMeeting(meetingData.id, t); setMeetingData((prev) => ({ ...prev, title: t })) } catch {}
+                    try { await renameMeeting(meetingData.id, t); setMeetingData((prev) => ({ ...prev, title: t })) } catch (e) { console.warn(e) }
                   }
                   setTitleEditing(false)
                 }}
@@ -912,11 +914,25 @@ function Review() {
             return (
               <>
                 <div className="rv-transcript-header">
-                  <span className="rv-section-label">Full Transcript</span>
-                  <span className="rv-transcript-count">{feed.length} messages</span>
+                  <div>
+                    <span className="rv-section-label">Full Transcript</span>
+                    <span className="rv-transcript-count" style={{ marginLeft: '12px' }}>{feed.length} messages</span>
+                  </div>
+                  <button
+                    className={`rv-email-expand-btn${transcriptExpanded ? ' rv-email-expand-btn--open' : ''}`}
+                    onClick={() => setTranscriptExpanded((v) => !v)}
+                  >
+                    <svg
+                      className={`rv-email-chevron${transcriptExpanded ? ' rv-email-chevron--open' : ''}`}
+                      width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                    {transcriptExpanded ? 'Collapse' : 'Expand'}
+                  </button>
                 </div>
 
-                {allSuggestions.length > 0 && (
+                {transcriptExpanded && allSuggestions.length > 0 && (
                   <div className={`rv-suggestions-bar${suggestionsOpen ? ' rv-suggestions-bar--open' : ''}`}>
                     <button
                       className="rv-suggestions-toggle"
@@ -954,6 +970,7 @@ function Review() {
                   </div>
                 )}
 
+                {transcriptExpanded && (
                 <div className="rv-transcript-feed">
                   {feed.length === 0 && (
                     <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
@@ -985,6 +1002,7 @@ function Review() {
                     )
                   })}
                 </div>
+                )}
               </>
             )
           })()}

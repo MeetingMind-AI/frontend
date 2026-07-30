@@ -1167,6 +1167,26 @@
   background: var(--accent-hover);
 }
 
+.rv-tag-btn {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-dim);
+}
+
+.rv-tag-btn--tech.rv-tag-btn--active {
+  background: rgba(79, 142, 247, 0.2);
+  color: #4f8ef7;
+}
+
+.rv-tag-btn--biz.rv-tag-btn--active {
+  background: rgba(63, 185, 80, 0.2);
+  color: #3fb950;
+}
+
 @media (max-width: 800px) {
   .rv-kanban-board {
     grid-template-columns: 1fr;
