@@ -772,7 +772,232 @@
   margin-bottom: 4px;
 }
 
-/* ── Email button ── */
+/* ── Email report section ── */
+
+.rv-email-section {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.rv-email-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.rv-email-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.1px;
+}
+
+.rv-email-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: color 0.12s, background 0.12s;
+  cursor: pointer;
+}
+
+.rv-email-expand-btn:hover {
+  color: var(--text-1);
+  background: var(--bg-3);
+}
+
+.rv-email-chevron {
+  transition: transform 0.2s ease;
+}
+
+.rv-email-chevron--open {
+  transform: rotate(180deg);
+}
+
+.rv-email-preview {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #fff;
+  transition: height 0.3s ease;
+  margin-bottom: 16px;
+}
+
+.rv-email-preview--expanded {
+  height: 720px;
+  overflow-y: auto;
+}
+
+.rv-email-iframe {
+  width: 100%;
+  height: 720px;
+  border: none;
+  display: block;
+}
+
+.rv-email-preview-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: linear-gradient(to bottom, transparent, #ffffff);
+  pointer-events: none;
+}
+
+.rv-email-preview-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.rv-email-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rv-email-recipients-wrap {
+  position: relative;
+}
+
+.rv-email-recipient-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: color 0.12s, background 0.12s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rv-email-recipient-btn:hover {
+  color: var(--text-1);
+  background: var(--bg-3);
+}
+
+.rv-email-recipient-dropdown {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 280px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rv-email-recipient-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.rv-email-recipient-row:hover {
+  background: var(--bg-3);
+}
+
+.rv-email-recipient-check {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.rv-email-recipient-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  flex-shrink: 0;
+}
+
+.rv-email-recipient-email {
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-email-send-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--accent);
+  box-shadow: 0 2px 8px rgba(79, 142, 247, 0.25);
+  transition: background 0.15s, opacity 0.15s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rv-email-send-btn:hover:not(:disabled) {
+  background: var(--accent-hover, #3a7de8);
+}
+
+.rv-email-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rv-email-send-btn--sent {
+  background: var(--green) !important;
+  box-shadow: 0 2px 8px rgba(63, 185, 80, 0.25) !important;
+}
+
+.rv-email-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--red);
+}
+
+/* ── Email button (header) ── */
 .rv-email-btn {
   display: flex;
   align-items: center;
