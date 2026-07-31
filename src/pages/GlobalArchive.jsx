@@ -18,6 +18,16 @@ function ArchiveCard({ item, members, onRefresh }) {
     }
   }
 
+  const toggleTag = async (tag) => {
+    const newTags = item.tags.includes(tag) ? item.tags.filter(t => t !== tag) : [...item.tags, tag]
+    try {
+      await updateAction(item.meetingId, item.id, undefined, undefined, undefined, undefined, newTags)
+      onRefresh()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   return (
     <div className="pl-item" style={{ opacity: 0.8 }}>
       <div className="pl-item-body">
@@ -26,12 +36,18 @@ function ArchiveCard({ item, members, onRefresh }) {
           <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-dim)' }}>
             {item.action_type.toUpperCase()}
           </span>
-          {item.tags.includes('technical') && (
-            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', background: 'rgba(79, 142, 247, 0.2)', color: '#4f8ef7' }}>Tech</span>
-          )}
-          {item.tags.includes('business') && (
-            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', background: 'rgba(63, 185, 80, 0.2)', color: '#3fb950' }}>Biz</span>
-          )}
+          <button
+            onClick={() => toggleTag('technical')}
+            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: item.tags.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: item.tags.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
+          >
+            Tech
+          </button>
+          <button
+            onClick={() => toggleTag('business')}
+            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: item.tags.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: item.tags.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
+          >
+            Biz
+          </button>
         </div>
         {item.assignee && (
           <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-dim)' }}>
