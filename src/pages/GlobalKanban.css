@@ -61,6 +61,121 @@
   border-color: var(--accent);
 }
 
+/* ── Form selects (inside modals / add-item forms) ── */
+.gk-form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1;
+  min-width: 0;
+  background-color: var(--bg-3);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e7681' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-size: 13px;
+  font-family: var(--font);
+  padding: 9px 32px 9px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.gk-form-select:hover {
+  border-color: var(--bg-4, #484f58);
+}
+
+.gk-form-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.gk-form-select option {
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+
+/* ── Modal / add-form panel ── */
+.gk-add-panel {
+  padding: 20px 24px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gk-add-panel h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.gk-add-row {
+  display: flex;
+  gap: 10px;
+}
+
+.gk-add-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-size: 13px;
+  font-family: var(--font);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.gk-add-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.gk-add-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.gk-add-btn {
+  padding: 8px 18px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.gk-add-btn:hover {
+  opacity: 0.85;
+}
+
+.gk-add-btn--cancel {
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}
+
+.gk-add-btn--cancel:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
+  opacity: 1;
+}
+
+.gk-add-btn--save {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+
 /* ── Tabs ── */
 .gk-tabs {
   display: flex;
