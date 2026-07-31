@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getAllActions, getMembers, getMeetings, createAction, updateAction } from '../api'
 import { buildParkingLotItems } from '../utils'
+import './GlobalKanban.css'
 import './GlobalParkingLot.css'
 
 function ParkingCard({ item, members, onRefresh }) {
@@ -190,32 +191,32 @@ export default function GlobalParkingLot() {
       </div>
 
       {showModal && (
-        <div style={{ padding: '16px', background: 'var(--bg-card)', borderRadius: '8px', marginBottom: '24px', border: '1px solid var(--border)' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Add Parking Lot Item</h3>
-          <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <input 
-              type="text" 
-              placeholder="Item content..." 
-              value={newItemText} 
+        <div className="gk-add-panel">
+          <h3>Add Parking Lot Item</h3>
+          <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <input
+              className="gk-add-input"
+              type="text"
+              placeholder="Item content..."
+              value={newItemText}
               onChange={e => setNewItemText(e.target.value)}
-              style={{ padding: '8px', background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '4px' }}
               required
             />
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <select 
-                value={newItemAssignee} 
+            <div className="gk-add-row">
+              <select
+                className="gk-form-select"
+                value={newItemAssignee}
                 onChange={e => setNewItemAssignee(e.target.value)}
-                style={{ flex: 1, padding: '8px', background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '4px' }}
               >
                 <option value="">Unassigned</option>
                 {members.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>
-              <select 
-                value={newItemMeeting} 
+              <select
+                className="gk-form-select"
+                value={newItemMeeting}
                 onChange={e => setNewItemMeeting(e.target.value)}
-                style={{ flex: 1, padding: '8px', background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '4px' }}
                 required
               >
                 {meetings.length === 0 && <option value="">No meetings available</option>}
@@ -224,9 +225,9 @@ export default function GlobalParkingLot() {
                 ))}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowModal(false)} style={{ padding: '8px 16px', background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" style={{ padding: '8px 16px', background: 'var(--accent)', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Save</button>
+            <div className="gk-add-actions">
+              <button type="button" className="gk-add-btn gk-add-btn--cancel" onClick={() => setShowModal(false)}>Cancel</button>
+              <button type="submit" className="gk-add-btn gk-add-btn--save">Save</button>
             </div>
           </form>
         </div>
