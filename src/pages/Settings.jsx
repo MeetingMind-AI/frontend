@@ -120,13 +120,21 @@ export default function Settings() {
     }
   }
 
-  const handleUpdateMember = async (userId, role) => {
+  const handleUpdateMember = async (userId, updates) => {
     try {
-      const updatedUser = await updateTeamMember(teamId, userId, { role })
+      const updatedUser = await updateTeamMember(teamId, userId, updates)
       setMembers((prev) => prev.map((m) => m.id === userId ? updatedUser : m))
     } catch (err) {
       alert(err.message)
     }
+  }
+
+  const toggleNotificationPref = (m, pref) => {
+    const current = m.notification_preferences || []
+    const newPrefs = current.includes(pref) 
+      ? current.filter(p => p !== pref)
+      : [...current, pref]
+    handleUpdateMember(m.id, { notification_preferences: newPrefs })
   }
 
   const handleGetInvite = async () => {
@@ -243,6 +251,61 @@ export default function Settings() {
     }
   }
 
+  const handleExportPrompts = () => {
+    const customPrompts = prompts.filter(p => p.is_custom).map(p => ({ key: p.key, text: p.text }))
+    const blob = new Blob([JSON.stringify(customPrompts, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `meetingmind-prompts-${teamId}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImportPrompts = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      try {
+        const imported = JSON.parse(event.target.result)
+        if (!Array.isArray(imported)) throw new Error("Invalid format")
+        let errorCount = 0
+        for (const p of imported) {
+          if (!p.key || !p.text) continue
+          try {
+            await updateTeamPrompt(teamId, p.key, p.text)
+          } catch (err) {
+            console.error("Failed to import", p.key, err)
+            errorCount++
+          }
+        }
+        await loadPrompts()
+        alert(`Imported successfully${errorCount > 0 ? ` with ${errorCount} errors` : ''}.`)
+      } catch (err) {
+        alert("Failed to parse JSON file.")
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = '' // Reset input
+  }
+
+  const handleResetAllPrompts = async () => {
+    if (!confirm('Are you sure you want to reset ALL custom prompts back to their system defaults? This cannot be undone.')) return
+    const customPrompts = prompts.filter(p => p.is_custom)
+    let errorCount = 0
+    for (const p of customPrompts) {
+      try {
+        await resetTeamPrompt(teamId, p.key)
+      } catch (err) {
+        console.error("Failed to reset", p.key, err)
+        errorCount++
+      }
+    }
+    await loadPrompts()
+    if (errorCount > 0) alert(`Reset completed with ${errorCount} errors.`)
+  }
+
   return (
     <div className="settings-page">
       <div className="settings-top">
@@ -308,12 +371,26 @@ export default function Settings() {
                             <select
                               value={m.role || 'member'}
                               disabled={!isOwner}
-                              onChange={(e) => handleUpdateMember(m.id, e.target.value)}
+                              onChange={(e) => handleUpdateMember(m.id, { role: e.target.value })}
                               style={{ marginLeft: '4px', fontSize: '12px' }}
                             >
                               <option value="member">Member</option>
                               <option value="admin">Admin</option>
                             </select>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={(m.notification_preferences || []).includes('technical')}
+                              onChange={() => toggleNotificationPref(m, 'technical')}
+                            /> Technical
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={(m.notification_preferences || []).includes('business')}
+                              onChange={() => toggleNotificationPref(m, 'business')}
+                            /> Business
                           </label>
                         </div>
                       )}
@@ -413,7 +490,21 @@ export default function Settings() {
 
           {tab === 'prompts' && (
             <div>
-              <h2 className="settings-section-title">AI Prompts</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h2 className="settings-section-title" style={{ marginBottom: 0 }}>AI Prompts</h2>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button className="settings-save-btn settings-save-btn--sm" style={{ display: 'inline-flex', alignItems: 'center', height: '32px', boxSizing: 'border-box' }} onClick={handleExportPrompts}>
+                    Export JSON
+                  </button>
+                  <label className="settings-save-btn settings-save-btn--sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', height: '32px', boxSizing: 'border-box', margin: 0 }}>
+                    Import JSON
+                    <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportPrompts} />
+                  </label>
+                  <button className="settings-cancel-btn" onClick={handleResetAllPrompts} style={{ padding: '0 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', height: '32px', boxSizing: 'border-box', margin: 0 }}>
+                    Reset All to Default
+                  </button>
+                </div>
+              </div>
               <p className="settings-description">Customize the prompts sent to the AI for this team. Changes apply to all future meetings.</p>
               <div className="settings-prompt-list">
                 {PROMPT_GROUPS.map((group) => {
