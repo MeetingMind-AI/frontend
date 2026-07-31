@@ -247,8 +247,8 @@ async function apiFetch(path, options = {}) {
     return apiFetch(`/api/actions${qs}`)
   }
 
-  export async function createAction(meetingId, actionType, content, assigneeId = null, tags = null) {
-    const body = { action_type: actionType, content }
+  export async function createAction(meetingId, actionType, content, assigneeId = null, tags = null, status = 'accepted') {
+    const body = { action_type: actionType, content, status }
     if (assigneeId !== null) body.assignee_id = assigneeId
     if (tags !== null) body.tags = tags
     return apiFetch(`/api/meetings/${meetingId}/actions`, {

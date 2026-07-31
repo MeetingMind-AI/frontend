@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getAllActions, getMembers, getMeetings, createAction, updateAction } from '../api'
+import { getAllActions, getMeetings, createAction, updateAction } from '../api'
 import { buildScheduleItems } from '../utils'
 import './GlobalKanban.css'
 
@@ -72,12 +72,10 @@ function ScheduleRow({ item, members, onRefresh }) {
 export default function GlobalSchedule() {
   const { teamId } = useParams()
   const [tasks, setTasks] = useState([])
-  const [members, setMembers] = useState([])
   const [meetings, setMeetings] = useState([])
-  
+
   const [showModal, setShowModal] = useState(false)
   const [newItemText, setNewItemText] = useState('')
-  const [newItemAssignee, setNewItemAssignee] = useState('')
   const [newItemMeeting, setNewItemMeeting] = useState('')
 
   const loadData = () => {
@@ -89,7 +87,6 @@ export default function GlobalSchedule() {
   useEffect(() => {
     loadData()
     if (teamId) {
-      getMembers(teamId).then(setMembers).catch(() => {})
       getMeetings(teamId).then(meets => {
         setMeetings(meets)
         if (meets.length > 0) setNewItemMeeting(meets[0].id)
@@ -101,7 +98,7 @@ export default function GlobalSchedule() {
     e.preventDefault()
     if (!newItemMeeting || !newItemText.trim()) return
     try {
-      await createAction(newItemMeeting, 'to_schedule', newItemText, newItemAssignee ? parseInt(newItemAssignee) : null)
+      await createAction(newItemMeeting, 'to_schedule', newItemText)
       setShowModal(false)
       setNewItemText('')
       loadData()
@@ -140,29 +137,17 @@ export default function GlobalSchedule() {
               onChange={e => setNewItemText(e.target.value)}
               required
             />
-            <div className="gk-add-row">
-              <select
-                className="gk-form-select"
-                value={newItemAssignee}
-                onChange={e => setNewItemAssignee(e.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {members.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-              <select
-                className="gk-form-select"
-                value={newItemMeeting}
-                onChange={e => setNewItemMeeting(e.target.value)}
-                required
-              >
-                {meetings.length === 0 && <option value="">No meetings available</option>}
-                {meetings.map(m => (
-                  <option key={m.id} value={m.id}>{m.title}</option>
-                ))}
-              </select>
-            </div>
+            <select
+              className="gk-form-select"
+              value={newItemMeeting}
+              onChange={e => setNewItemMeeting(e.target.value)}
+              required
+            >
+              {meetings.length === 0 && <option value="">No meetings available</option>}
+              {meetings.map(m => (
+                <option key={m.id} value={m.id}>{m.title}</option>
+              ))}
+            </select>
             <div className="gk-add-actions">
               <button type="button" className="gk-add-btn gk-add-btn--cancel" onClick={() => setShowModal(false)}>Cancel</button>
               <button type="submit" className="gk-add-btn gk-add-btn--save">Save</button>
@@ -175,7 +160,7 @@ export default function GlobalSchedule() {
         <div className="gk-schedule-section">
           <h2 className="gk-schedule-section-title">To Schedule ({tasks.length})</h2>
           {tasks.map((t) => (
-            <ScheduleRow key={t.id} item={t} members={members} onRefresh={loadData} />
+            <ScheduleRow key={t.id} item={t} onRefresh={loadData} />
           ))}
         </div>
       )}

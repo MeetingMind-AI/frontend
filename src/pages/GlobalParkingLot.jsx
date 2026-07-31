@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getAllActions, getMembers, getMeetings, createAction, updateAction } from '../api'
+import { getAllActions, getMeetings, createAction, updateAction } from '../api'
 import { buildParkingLotItems } from '../utils'
 import './GlobalKanban.css'
 import './GlobalParkingLot.css'
 
-function ParkingCard({ item, members, onRefresh }) {
+function ParkingCard({ item, onRefresh }) {
   const [promoting, setPromoting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(item.text)
@@ -114,17 +114,15 @@ function ParkingCard({ item, members, onRefresh }) {
 export default function GlobalParkingLot() {
   const { teamId } = useParams()
   const [items, setItems] = useState([])
-  const [members, setMembers] = useState([])
   const [meetings, setMeetings] = useState([])
-  
+
   const [showModal, setShowModal] = useState(false)
   const [newItemText, setNewItemText] = useState('')
-  const [newItemAssignee, setNewItemAssignee] = useState('')
   const [newItemMeeting, setNewItemMeeting] = useState('')
   const [filterTags, setFilterTags] = useState([])
 
   const toggleFilter = (tag) => setFilterTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  
+
   const filteredItems = items.filter(t => {
     if (filterTags.length === 0) return true
     return filterTags.every(ft => t.tags.includes(ft))
@@ -139,7 +137,6 @@ export default function GlobalParkingLot() {
   useEffect(() => {
     loadData()
     if (teamId) {
-      getMembers(teamId).then(setMembers).catch(() => {})
       getMeetings(teamId).then(meets => {
         setMeetings(meets)
         if (meets.length > 0) setNewItemMeeting(meets[0].id)
@@ -151,7 +148,7 @@ export default function GlobalParkingLot() {
     e.preventDefault()
     if (!newItemMeeting || !newItemText.trim()) return
     try {
-      await createAction(newItemMeeting, 'parking_lot', newItemText, newItemAssignee ? parseInt(newItemAssignee) : null)
+      await createAction(newItemMeeting, 'parking_lot', newItemText)
       setShowModal(false)
       setNewItemText('')
       loadData()
@@ -202,29 +199,17 @@ export default function GlobalParkingLot() {
               onChange={e => setNewItemText(e.target.value)}
               required
             />
-            <div className="gk-add-row">
-              <select
-                className="gk-form-select"
-                value={newItemAssignee}
-                onChange={e => setNewItemAssignee(e.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {members.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-              <select
-                className="gk-form-select"
-                value={newItemMeeting}
-                onChange={e => setNewItemMeeting(e.target.value)}
-                required
-              >
-                {meetings.length === 0 && <option value="">No meetings available</option>}
-                {meetings.map(m => (
-                  <option key={m.id} value={m.id}>{m.title}</option>
-                ))}
-              </select>
-            </div>
+            <select
+              className="gk-form-select"
+              value={newItemMeeting}
+              onChange={e => setNewItemMeeting(e.target.value)}
+              required
+            >
+              {meetings.length === 0 && <option value="">No meetings available</option>}
+              {meetings.map(m => (
+                <option key={m.id} value={m.id}>{m.title}</option>
+              ))}
+            </select>
             <div className="gk-add-actions">
               <button type="button" className="gk-add-btn gk-add-btn--cancel" onClick={() => setShowModal(false)}>Cancel</button>
               <button type="submit" className="gk-add-btn gk-add-btn--save">Save</button>
@@ -242,7 +227,7 @@ export default function GlobalParkingLot() {
             </div>
             <div className="pl-group-items">
               {filteredItems.map((item) => (
-                <ParkingCard key={item.id} item={item} members={members} onRefresh={loadData} />
+                <ParkingCard key={item.id} item={item} onRefresh={loadData} />
               ))}
             </div>
           </div>
