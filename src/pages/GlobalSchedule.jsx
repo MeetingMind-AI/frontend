@@ -90,8 +90,7 @@ export default function GlobalSchedule() {
     loadData()
     if (teamId) {
       getMembers(teamId).then(setMembers).catch(() => {})
-      getMeetings(teamId).then(data => {
-        const meets = data.meetings || []
+      getMeetings(teamId).then(meets => {
         setMeetings(meets)
         if (meets.length > 0) setNewItemMeeting(meets[0].id)
       }).catch(() => {})
