@@ -14,19 +14,37 @@ import './Live.css'
 const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE', blocker: 'BLOCKER' }
 
 /** Set of meeting bot status strings considered active/in-progress. */
-const ACTIVE_BOT_STATUSES = new Set(['pending','requested','dispatched','joining','waiting','waiting_admission','active','in_meeting','connected'])
+const ACTIVE_BOT_STATUSES = new Set([
+  'pending',
+  'requested',
+  'starting',
+  'dispatched',
+  'joining',
+  'waiting',
+  'waiting_admission',
+  'awaiting_admission',
+  'needs_help',
+  'needs_human_help',
+  'active',
+  'in_meeting',
+  'connected',
+  'stopping',
+])
 
 const READY_STATUSES = new Set(['active', 'in_meeting', 'connected'])
 
 const LOADING_STATUS_LABELS = {
   pending:           'Preparing bot',
   requested:         'Bot starting',
+  starting:          'Bot starting',
   dispatched:        'Dispatching to meeting',
   joining:           'Sending request to join',
   waiting:           'Awaiting host approval',
-  waiting_admission: 'Awaiting Admission',
+  waiting_admission: 'Awaiting host approval',
+  awaiting_admission:'Awaiting host approval',
+  needs_help:        'Blocked: Needs Host Admission',
   needs_human_help:  'Blocked: Needs Host Admission',
-  active:            'Finalizing last tweaks',
+  active:            'Connected',
   in_meeting:        'Bot connected',
   connected:         'Bot connected',
 }
