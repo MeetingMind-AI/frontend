@@ -6,7 +6,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction, getMeeting, deleteMeeting } from '../api'
+import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction, getMeeting, deleteMeeting, getMembers } from '../api'
+import { useAuth } from '../contexts/AuthContext'
 import MiniPipContent from './MiniPipContent'
 import LiveThinkingPanel from '../components/LiveThinkingPanel'
 import './Live.css'
@@ -73,6 +74,8 @@ function Live() {
   const parsedMeetingId = meetingId ? parseInt(meetingId, 10) : null
   const nativeId = searchParams.get('native')
 
+  const { user } = useAuth()
+
   const [transcript, setTranscript] = useState(null)
   const [explainLoading, setExplainLoading] = useState(false)
   const [explainTime, setExplainTime] = useState(2)
@@ -90,6 +93,44 @@ function Live() {
   const [pipError, setPipError] = useState(null)
   const [showThinkingPanel, setShowThinkingPanel] = useState(false)
   const [liveThoughts, setLiveThoughts] = useState([])
+
+  /**
+   * Ref holding the Set of notification type keys the current user is allowed
+   * to see. Populated from their team membership notification_preferences.
+   * Null means "all allowed" (no restrictions set).
+   * Keys match the NOTIFICATION_TYPES defined in Settings: insight, to_do,
+   * parking_lot, to_schedule, blocker.
+   */
+  const notifAllowedRef = useRef(null)
+
+  // Fetch member notification preferences to know which event types to show
+  useEffect(() => {
+    if (!teamId || !user?.id) return
+    getMembers(teamId)
+      .then((members) => {
+        const me = members.find((m) => m.id === user.id)
+        if (!me) return
+        const prefs = me.notification_preferences || []
+        // Any type with a "type:<key>:off" entry in prefs is suppressed
+        const ALL_TYPES = ['insight', 'to_do', 'parking_lot', 'to_schedule', 'blocker']
+        const blocked = new Set(
+          prefs
+            .filter((p) => p.startsWith('type:') && p.endsWith(':off'))
+            .map((p) => p.replace(/^type:/, '').replace(/:off$/, ''))
+        )
+        // If nothing is blocked, keep notifAllowedRef as null (allow all)
+        if (blocked.size > 0) {
+          notifAllowedRef.current = new Set(ALL_TYPES.filter((t) => !blocked.has(t)))
+        }
+      })
+      .catch(() => {})
+  }, [teamId, user?.id])
+
+  /** Returns true if the given notification type key is permitted for this user */
+  const isNotifAllowed = useCallback((typeKey) => {
+    if (notifAllowedRef.current === null) return true // no restrictions
+    return notifAllowedRef.current.has(typeKey)
+  }, [])
 
   const addThought = useCallback((thought) => {
     setLiveThoughts((prev) => [
@@ -140,7 +181,9 @@ function Live() {
             ...(actions.parking_lot?.pending ?? []),
             ...(actions.to_schedule?.pending ?? []),
             ...(actions.blockers?.pending ?? []),
-          ].map(p => ({ ...p, type: p.type || p.action_type }))
+          ]
+            .map(p => ({ ...p, type: p.type || p.action_type }))
+            .filter(p => isNotifAllowed(p.type || 'to_do'))
           setPendingProposals(allPending)
           
           const allAccepted = [
@@ -148,7 +191,9 @@ function Live() {
             ...(actions.parking_lot?.accepted ?? []),
             ...(actions.to_schedule?.accepted ?? []),
             ...(actions.blockers?.accepted ?? []),
-          ].map(p => ({ ...p, type: p.type || p.action_type }))
+          ]
+            .map(p => ({ ...p, type: p.type || p.action_type }))
+            .filter(p => isNotifAllowed(p.type || 'to_do'))
           setAcceptedProposals(allAccepted)
           
           if (allPending.length > 0) {
@@ -225,6 +270,7 @@ function Live() {
         })
       },
       onInsight: (insight) => {
+        if (!isNotifAllowed('insight')) return
         addThought({
           agent: insight.role || 'scrum_master',
           title: 'Live Context Insight',
@@ -233,6 +279,8 @@ function Live() {
         })
       },
       onProposal: (proposal) => {
+        const proposalType = proposal.type || 'to_do'
+        if (!isNotifAllowed(proposalType)) return
         setPendingProposals((prev) => {
           if (prev.some(p => p.id === proposal.id || (p.content === proposal.content && p.type === proposal.type))) {
             return prev
@@ -260,7 +308,7 @@ function Live() {
     })
     wsRef.current = ws
     return () => { ws.close(); wsRef.current = null }
-  }, [parsedMeetingId, addThought])
+  }, [parsedMeetingId, addThought, isNotifAllowed])
 
 
 

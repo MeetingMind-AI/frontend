@@ -46,6 +46,14 @@ const PROMPT_GROUPS = [
   },
 ]
 
+const NOTIFICATION_TYPES = [
+  { key: 'type:insight',     label: 'Insights',     icon: '💡', description: 'Real-time Scrum Master observations' },
+  { key: 'type:to_do',      label: 'To Do',         icon: '✅', description: 'Action item proposals' },
+  { key: 'type:parking_lot',label: 'Parking Lot',   icon: '🅿️', description: 'Parked discussion items' },
+  { key: 'type:to_schedule', label: 'To Schedule',  icon: '📅', description: 'Items flagged for scheduling' },
+  { key: 'type:blocker',    label: 'Blockers',      icon: '🚧', description: 'Blocker alerts' },
+]
+
 const TABS = [
   { key: 'general', label: 'General' },
   { key: 'members', label: 'Members' },
@@ -402,6 +410,56 @@ export default function Settings() {
                           )}
                         </div>
                       )}
+                      {/* ── Notification Types (admin-only control) ── */}
+                      <div className="settings-notif-section">
+                        <span className="settings-notif-section-label">
+                          Live Notifications
+                          {!isOwner && (
+                            <span className="settings-notif-admin-badge">Admin only</span>
+                          )}
+                        </span>
+                        <div className="settings-notif-types">
+                          {NOTIFICATION_TYPES.map((nt) => {
+                            const isChecked = !(m.notification_preferences || []).includes(`${nt.key}:off`)
+                            // Only the owner can change notification types for any member
+                            const canEdit = isOwner
+                            return (
+                              <label
+                                key={nt.key}
+                                className={`settings-notif-type-chip ${isChecked ? 'settings-notif-type-chip--on' : 'settings-notif-type-chip--off'} ${!canEdit ? 'settings-notif-type-chip--locked' : ''}`}
+                                title={!canEdit ? 'Only admins can change notification types for members' : nt.description}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  disabled={!canEdit}
+                                  onChange={() => {
+                                    const prefs = m.notification_preferences || []
+                                    const offKey = `${nt.key}:off`
+                                    const newPrefs = isChecked
+                                      ? [...prefs, offKey]
+                                      : prefs.filter(p => p !== offKey)
+                                    handleUpdateMember(m.id, { notification_preferences: newPrefs })
+                                  }}
+                                  style={{ display: 'none' }}
+                                />
+                                <span className="settings-notif-type-icon">{nt.icon}</span>
+                                <span className="settings-notif-type-label">{nt.label}</span>
+                                {isChecked ? (
+                                  <span className="settings-notif-type-state">on</span>
+                                ) : (
+                                  <span className="settings-notif-type-state settings-notif-type-state--off">off</span>
+                                )}
+                              </label>
+                            )
+                          })}
+                        </div>
+                        {!isOwner && (
+                          <p className="settings-hint" style={{ marginTop: '4px', fontSize: '11px' }}>
+                            Only the team owner can manage notification types for members.
+                          </p>
+                        )}
+                      </div>
                     </div>
                     {team && m.id === team.owner_id && (
                       <span className="settings-member-badge">Owner</span>
