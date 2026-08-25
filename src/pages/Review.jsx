@@ -360,12 +360,15 @@ function Review() {
 
   useEffect(() => {
     if (!parsedMeetingId) return
-    if (meetingData?.status !== 'completed' || meetingData?.summary) return
+    const isSummarizing = Boolean(redoLoading || meetingData?.is_summarizing)
+    if (meetingData?.status !== 'completed' || meetingData?.summary || !isSummarizing) return
     const t = setInterval(async () => {
       try {
         const meeting = await getMeeting(parsedMeetingId)
         if (meeting.summary) {
           clearInterval(t)
+          setRedoLoading(false)
+          setRedoStartedAt(null)
           setMeetingData(meeting)
           // Also reload transcript and actions — finalization runs async after leave,
           // so these may have been updated (or restored) by the time the summary exists.
@@ -384,11 +387,16 @@ function Review() {
               }
             })
             .catch(() => {})
+        } else if (!meeting.is_summarizing) {
+          clearInterval(t)
+          setRedoLoading(false)
+          setRedoStartedAt(null)
+          setMeetingData(meeting)
         }
       } catch (e) { console.warn(e) }
-    }, 4000)
+    }, 3000)
     return () => clearInterval(t)
-  }, [parsedMeetingId, meetingData?.status, meetingData?.summary])
+  }, [parsedMeetingId, meetingData?.status, meetingData?.summary, meetingData?.is_summarizing, redoLoading])
 
 
   const taskItems     = tasks.filter((t) => t.type === 'todo')
@@ -437,6 +445,7 @@ function Review() {
     } finally {
       setRedoLoading(false)
       setRedoStartedAt(null)
+      setMeetingData((prev) => (prev ? { ...prev, is_summarizing: false } : prev))
       getMeeting(parsedMeetingId).then((m) => {
         if (m) setMeetingData(m)
       }).catch(() => {})
@@ -827,27 +836,45 @@ function Review() {
               Loading summary...
             </div>
           )}
-          {redoLoading && (
+          {!loading && !meetingData?.summary && (redoLoading || meetingData?.is_summarizing) && (
             <SummaryProgressIndicator
               meetingId={parsedMeetingId}
-              title="Regenerating AI Summary & Action Items"
-              subtitle="Re-analyzing transcript, running persona deliberation, and updating synthesis..."
+              title={redoLoading ? "Regenerating AI Summary & Action Items" : "Generating AI Meeting Summary"}
+              subtitle={redoLoading ? "Re-analyzing transcript, running persona deliberation, and updating synthesis..." : "Multi-agent orchestration in progress — this may take a moment..."}
               startedAt={redoStartedAt || meetingData?.summarizing_started_at}
-              onStop={handleStopSummary}
-              initialThoughts={meetingData?.live_summary_thoughts || []}
-            />
-          )}
-          {!loading && !redoLoading && !meetingData?.summary && meetingData?.status === 'completed' && (
-            <SummaryProgressIndicator
-              meetingId={parsedMeetingId}
-              title="Generating AI Meeting Summary"
-              subtitle="Multi-agent orchestration in progress — this may take a moment..."
-              startedAt={meetingData?.summarizing_started_at}
               onStop={canEdit ? handleStopSummary : undefined}
               initialThoughts={meetingData?.live_summary_thoughts || []}
             />
           )}
-          {!loading && !redoLoading && !meetingData?.summary && meetingData?.status !== 'completed' && (
+          {!loading && !redoLoading && !meetingData?.is_summarizing && !meetingData?.summary && meetingData?.status === 'completed' && (
+            <div className="rv-no-summary-card">
+              <div className="rv-no-summary-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <div className="rv-no-summary-content">
+                <h4 className="rv-no-summary-title">No Summary Available</h4>
+                <p className="rv-no-summary-text">
+                  Summary generation was stopped or hasn't been generated yet for this completed meeting.
+                </p>
+              </div>
+              {canEdit && (
+                <button className="rv-generate-summary-btn" onClick={handleRedoSummary} disabled={redoLoading}>
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                    <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <circle cx="10" cy="10" r="2.5" fill="currentColor" />
+                  </svg>
+                  Generate Summary Now
+                </button>
+              )}
+            </div>
+          )}
+          {!loading && !redoLoading && !meetingData?.is_summarizing && !meetingData?.summary && meetingData?.status !== 'completed' && (
             <div style={{ padding: '24px', color: 'var(--text-3)', fontSize: '13px' }}>
               Summary will be generated when the meeting ends.
             </div>

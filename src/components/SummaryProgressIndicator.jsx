@@ -214,6 +214,20 @@ export default function SummaryProgressIndicator({
 
   const currentStage = SUMMARY_STAGES[currentStageIndex] || SUMMARY_STAGES[0]
 
+  const [stopping, setStopping] = useState(false)
+
+  const handleStopClick = async (e) => {
+    e?.stopPropagation?.()
+    if (stopping || !onStop) return
+    setStopping(true)
+    try {
+      await onStop()
+    } catch (err) {
+      console.warn('[SummaryProgressIndicator] Stop failed:', err)
+      setStopping(false)
+    }
+  }
+
   // Combine progressive reasoning trace with real backend thoughts
   const visibleProgressive = PROGRESSIVE_THINKING_STEPS.filter((step) => elapsed >= step.minElapsed)
   const combinedThoughts = [...visibleProgressive, ...backendThoughts]
@@ -238,11 +252,16 @@ export default function SummaryProgressIndicator({
             <span>{elapsed}s elapsed</span>
           </div>
           {onStop && (
-            <button className="spi-stop-btn" onClick={onStop} title="Cancel and stop summary generation">
+            <button
+              className={`spi-stop-btn ${stopping ? 'spi-stop-btn--stopping' : ''}`}
+              onClick={handleStopClick}
+              disabled={stopping}
+              title="Cancel and stop summary generation"
+            >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                 <rect x="4" y="4" width="16" height="16" rx="2" />
               </svg>
-              Stop
+              {stopping ? 'Stopping...' : 'Stop'}
             </button>
           )}
         </div>

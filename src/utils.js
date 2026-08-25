@@ -59,8 +59,7 @@ export function meetingToCard(m) {
   if (m.status === 'needs_human_help') durationDisplay = 'Blocked (Lobby)'
   const isSummarizing = Boolean(
     m.is_summarizing ||
-    m.status === 'processing' ||
-    (m.status === 'completed' && !m.summary)
+    m.status === 'processing'
   )
   return {
     id: m.id,

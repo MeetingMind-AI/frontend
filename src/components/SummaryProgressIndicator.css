@@ -116,9 +116,15 @@
   transition: all 0.15s ease;
 }
 
-.spi-stop-btn:hover {
+.spi-stop-btn:hover:not(:disabled) {
   background: rgba(248, 81, 73, 0.2);
   border-color: var(--red, #f85149);
+}
+
+.spi-stop-btn:disabled,
+.spi-stop-btn--stopping {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .spi-pulse-dot {
