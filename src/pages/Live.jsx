@@ -237,6 +237,10 @@ function Live() {
       return () => clearInterval(t)
     }
     getMeeting(parsedMeetingId).then((data) => {
+      if (data?.status === 'completed' || data?.is_summarizing) {
+        navigate(`/teams/${teamId}/review/${parsedMeetingId}`)
+        return
+      }
       if (data?.created_at) {
         const startMs = new Date(data.created_at).getTime()
         setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
@@ -248,7 +252,7 @@ function Live() {
     }).catch(() => {})
     const t = setInterval(() => setElapsed((e) => e + 1), 1000)
     return () => clearInterval(t)
-  }, [parsedMeetingId])
+  }, [parsedMeetingId, teamId, navigate])
 
   useEffect(() => {
     if (!parsedMeetingId) return
@@ -260,11 +264,14 @@ function Live() {
             setBotStatus(data.status)
             botStatusRef.current = data.status
           }
+          if (data?.status === 'completed' || data?.is_summarizing) {
+            navigate(`/teams/${teamId}/review/${parsedMeetingId}`)
+          }
         })
         .catch(() => {})
     }, 2000)
     return () => clearInterval(t)
-  }, [parsedMeetingId])
+  }, [parsedMeetingId, teamId, navigate])
 
   useEffect(() => {
     if (!botStatus || !parsedMeetingId) return
@@ -272,9 +279,8 @@ function Live() {
       hasBeenActiveRef.current = true
       return
     }
-    if (botStatus === 'completed' && hasBeenActiveRef.current) {
-      const t = setTimeout(() => navigate(`/teams/${teamId}/review/${parsedMeetingId}`), 2000)
-      return () => clearTimeout(t)
+    if (botStatus === 'completed') {
+      navigate(`/teams/${teamId}/review/${parsedMeetingId}`)
     }
   }, [botStatus, parsedMeetingId, teamId, navigate])
 

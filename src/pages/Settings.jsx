@@ -381,20 +381,25 @@ export default function Settings() {
                               <option value="admin">Admin</option>
                             </select>
                           </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={(m.notification_preferences || []).includes('technical')}
-                              onChange={() => toggleNotificationPref(m, 'technical')}
-                            /> Technical
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={(m.notification_preferences || []).includes('business')}
-                              onChange={() => toggleNotificationPref(m, 'business')}
-                            /> Business
-                          </label>
+                          {topics.length > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginLeft: '6px' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>Topics:</span>
+                              {topics.map((t) => {
+                                const isChecked = (m.notification_preferences || []).includes(t.name) || (m.notification_preferences || []).includes(String(t.id))
+                                return (
+                                  <label key={t.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', cursor: 'pointer' }}>
+                                    <input 
+                                      type="checkbox" 
+                                      checked={isChecked}
+                                      onChange={() => toggleNotificationPref(m, t.name)}
+                                    />
+                                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: t.color }} />
+                                    {t.name}
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
