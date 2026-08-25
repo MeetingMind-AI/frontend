@@ -9,26 +9,45 @@ import './MeetingTopicTags.css'
 /**
  * TopicDropdown component.
  * Displays a dropdown list of available team topics allowing users to toggle topic assignments.
+ * Automatically detects screen boundaries to open downwards or upwards without getting cropped.
  *
  * @param {Object} props - Component props.
  * @param {Array<Object>} props.teamTopics - List of team topics.
  * @param {Array<Object>} props.meetingTopics - List of topics currently assigned to the meeting.
  * @param {Function} props.onAdd - Callback when adding a topic.
  * @param {Function} props.onRemove - Callback when removing a topic.
- * @param {boolean} [props.dropUp=false] - Whether dropdown should open upwards.
+ * @param {boolean} [props.dropUp=false] - Optional preference for opening upwards.
  */
-function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove, dropUp }) {
+function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove, dropUp = false }) {
   const [open, setOpen] = useState(false)
+  const [placement, setPlacement] = useState(dropUp ? 'up' : 'down')
   const ref = useRef(null)
 
   useEffect(() => {
     if (!open) return
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      const estimatedHeight = Math.min(teamTopics.length * 36 + 12, 220)
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+
+      // If near the top of the viewport or plenty of space below, open down
+      if (spaceAbove < estimatedHeight + 20) {
+        setPlacement('down')
+      } else if (spaceBelow < estimatedHeight + 10 && spaceAbove >= estimatedHeight) {
+        setPlacement('up')
+      } else if (dropUp && spaceAbove >= estimatedHeight) {
+        setPlacement('up')
+      } else {
+        setPlacement('down')
+      }
+    }
     function handler(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  }, [open, teamTopics.length, dropUp])
 
   if (teamTopics.length === 0) return null
 
@@ -42,7 +61,7 @@ function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove, dropUp }) {
         Topic
       </button>
       {open && (
-        <div className={`mm-topic-dropdown mm-topic-dropdown--${dropUp ? 'up' : 'down'}`}>
+        <div className={`mm-topic-dropdown mm-topic-dropdown--${placement}`}>
           {teamTopics.map((t) => {
             const isOn = meetingTopics.some((mt) => mt.id === t.id)
             return (
@@ -80,7 +99,7 @@ function TopicDropdown({ teamTopics, meetingTopics, onAdd, onRemove, dropUp }) {
  * @param {Array<Object>} props.teamTopics - All available team topics.
  * @param {Function} props.onAdd - Add topic handler.
  * @param {Function} props.onRemove - Remove topic handler.
- * @param {boolean} [props.dropUp=false] - Open direction flag for dropdown.
+ * @param {boolean} [props.dropUp=false] - Optional preference for opening upwards.
  */
 export default function MeetingTopicTags({ meetingTopics, teamTopics, onAdd, onRemove, dropUp = false }) {
   if (meetingTopics.length === 0 && teamTopics.length === 0) return null

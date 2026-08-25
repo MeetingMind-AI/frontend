@@ -83,7 +83,7 @@ export default function MiniPipContent({ meetingId, initialProposals, onGoBack }
 
         {explainResult && (
           <div className="mp-explain-result" style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <div className="mp-explain-result-title" style={{ margin: 0 }}>{explainTitle}</div>
               <button
                 onClick={() => setExplainResult(null)}
@@ -95,6 +95,9 @@ export default function MiniPipContent({ meetingId, initialProposals, onGoBack }
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '8px' }}>
+              ✦ AI generated · Verify for accuracy
             </div>
             <p className="mp-explain-result-text">{explainResult}</p>
           </div>
