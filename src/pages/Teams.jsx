@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getTeams, createTeam } from '../api'
 import { useAuth } from '../contexts/AuthContext'
+import UserSetupModal from '../components/UserSetupModal'
 import './Teams.css'
 
 export default function Teams() {
@@ -14,6 +15,16 @@ export default function Teams() {
   const [newName, setNewName] = useState('')
   const [createError, setCreateError] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
+  const [showUserSetup, setShowUserSetup] = useState(false)
+
+  useEffect(() => {
+    if (user?.id) {
+      const userDone = localStorage.getItem(`mm_user_setup_completed_${user.id}`)
+      if (!userDone) {
+        setShowUserSetup(true)
+      }
+    }
+  }, [user?.id])
 
   useEffect(() => {
     getTeams()
@@ -125,6 +136,7 @@ export default function Teams() {
           </div>
         )}
       </div>
+      {showUserSetup && <UserSetupModal onClose={() => setShowUserSetup(false)} />}
     </div>
   )
 }

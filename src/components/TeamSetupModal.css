@@ -1,0 +1,368 @@
+/**
+ * @file TeamSetupModal.css
+ * @description Styling for first-time team workspace enter setup and onboarding modal.
+ */
+
+.tsm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: tsmFadeIn 0.2s ease-out;
+}
+
+@keyframes tsmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tsm-modal {
+  background: var(--bg-2, #161b22);
+  border: 1px solid var(--border, #30363d);
+  border-radius: var(--radius-lg, 12px);
+  width: 100%;
+  max-width: 540px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: tsmSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tsmSlideUp {
+  from { transform: translateY(16px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.tsm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, #30363d);
+  background: var(--bg-1, #0d1117);
+}
+
+.tsm-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tsm-team-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4f8ef7, #bc8cff);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tsm-brand {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1, #f0f6fc);
+}
+
+.tsm-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3, #6e7681);
+}
+
+.tsm-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-3, #6e7681);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tsm-close-btn:hover {
+  color: var(--text-1, #f0f6fc);
+  background: var(--bg-3, #21262d);
+}
+
+.tsm-steps {
+  display: flex;
+  border-bottom: 1px solid var(--border, #30363d);
+  background: var(--bg-1, #0d1117);
+}
+
+.tsm-step-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3, #6e7681);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tsm-step-tab--active {
+  color: var(--accent, #4f8ef7);
+  border-bottom-color: var(--accent, #4f8ef7);
+}
+
+.tsm-step-tab--done {
+  color: var(--text-2, #8b949e);
+}
+
+.tsm-step-number {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg-3, #21262d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.tsm-step-tab--active .tsm-step-number {
+  background: var(--accent, #4f8ef7);
+  color: #fff;
+}
+
+.tsm-step-tab--done .tsm-step-number {
+  background: rgba(63, 185, 80, 0.2);
+  color: var(--green, #3fb950);
+}
+
+.tsm-body {
+  padding: 24px 20px;
+  min-height: 260px;
+}
+
+.tsm-error-alert {
+  padding: 10px 14px;
+  background: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  color: var(--red, #f85149);
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.tsm-step-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1, #f0f6fc);
+  margin: 0 0 6px 0;
+}
+
+.tsm-step-desc {
+  font-size: 13px;
+  color: var(--text-2, #8b949e);
+  margin: 0 0 20px 0;
+  line-height: 1.45;
+}
+
+.tsm-topics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.tsm-topic-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tsm-topic-card:hover {
+  border-color: var(--text-3, #6e7681);
+}
+
+.tsm-topic-card--selected {
+  border-color: var(--accent, #4f8ef7);
+  background: rgba(79, 142, 247, 0.08);
+}
+
+.tsm-topic-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tsm-topic-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1, #f0f6fc);
+}
+
+.tsm-topic-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #30363d);
+  background: var(--bg-3, #21262d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.tsm-topic-card--selected .tsm-topic-checkbox {
+  background: var(--accent, #4f8ef7);
+  border-color: var(--accent, #4f8ef7);
+}
+
+.tsm-checkbox-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.tsm-checkbox-card:hover {
+  border-color: var(--accent, #4f8ef7);
+}
+
+.tsm-checkbox-card input[type="checkbox"] {
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.tsm-checkbox-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tsm-checkbox-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1, #f0f6fc);
+}
+
+.tsm-checkbox-sub {
+  font-size: 11px;
+  color: var(--text-3, #6e7681);
+}
+
+.tsm-invite-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+}
+
+.tsm-invite-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--text-2, #8b949e);
+  padding: 4px 8px;
+}
+
+.tsm-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent, #4f8ef7);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tsm-copy-btn:hover:not(:disabled) {
+  background: #3b7ad9;
+}
+
+.tsm-copy-btn--copied {
+  background: var(--green, #3fb950) !important;
+}
+
+.tsm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border, #30363d);
+  background: var(--bg-1, #0d1117);
+}
+
+.tsm-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tsm-btn--ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-2, #8b949e);
+}
+
+.tsm-btn--ghost:hover {
+  color: var(--text-1, #f0f6fc);
+  background: var(--bg-3, #21262d);
+}
+
+.tsm-btn--primary {
+  background: var(--accent, #4f8ef7);
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+.tsm-btn--primary:hover:not(:disabled) {
+  background: #3b7ad9;
+  box-shadow: 0 2px 8px rgba(79, 142, 247, 0.4);
+}
+
+.tsm-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

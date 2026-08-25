@@ -1,0 +1,318 @@
+/**
+ * @file ThinkingProcess.css
+ * @description Gemini / Claude-style thinking process and inner workings accordion styles.
+ */
+
+.tp-wrapper {
+  background: var(--bg-2, #161b22);
+  border: 1px solid var(--border, #30363d);
+  border-radius: var(--radius-lg, 12px);
+  margin: 14px 0 20px 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.tp-wrapper--open {
+  border-color: rgba(79, 142, 247, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.tp-toggle-btn {
+  width: 100%;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-1, #0d1117);
+  border: none;
+  cursor: pointer;
+  color: var(--text-1, #f0f6fc);
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.tp-toggle-btn:hover {
+  background: var(--bg-3, #21262d);
+}
+
+.tp-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tp-brain-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(79, 142, 247, 0.15);
+  color: var(--accent, #4f8ef7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tp-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1, #f0f6fc);
+  letter-spacing: -0.1px;
+}
+
+.tp-stage-count-pill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--bg-3, #21262d);
+  border: 1px solid var(--border, #30363d);
+  color: var(--text-2, #8b949e);
+}
+
+.tp-timing-tag {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-3, #6e7681);
+}
+
+.tp-toggle-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3, #6e7681);
+}
+
+.tp-toggle-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tp-chevron {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tp-chevron--open {
+  transform: rotate(180deg);
+}
+
+.tp-body {
+  padding: 16px 18px 20px 18px;
+  border-top: 1px solid var(--border, #30363d);
+  background: var(--bg-2, #161b22);
+}
+
+.tp-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.tp-filter-pill {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  color: var(--text-2, #8b949e);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tp-filter-pill:hover {
+  color: var(--text-1, #f0f6fc);
+  border-color: var(--text-3, #6e7681);
+}
+
+.tp-filter-pill--active {
+  background: rgba(79, 142, 247, 0.15);
+  border-color: var(--accent, #4f8ef7);
+  color: var(--accent, #4f8ef7);
+}
+
+.tp-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tp-step-card {
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.tp-step--tech {
+  border-left-color: #bc8cff;
+}
+
+.tp-step--pm {
+  border-left-color: #4f8ef7;
+}
+
+.tp-step--debate {
+  border-left-color: #d29922;
+}
+
+.tp-step--sm {
+  border-left-color: #3fb950;
+}
+
+.tp-step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.tp-agent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.tp-agent--tech {
+  background: rgba(188, 140, 255, 0.15);
+  color: #bc8cff;
+  border: 1px solid rgba(188, 140, 255, 0.3);
+}
+
+.tp-agent--pm {
+  background: rgba(79, 142, 247, 0.15);
+  color: #4f8ef7;
+  border: 1px solid rgba(79, 142, 247, 0.3);
+}
+
+.tp-agent--debate {
+  background: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+  border: 1px solid rgba(210, 153, 34, 0.3);
+}
+
+.tp-agent--sm {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.tp-step-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2, #8b949e);
+}
+
+.tp-step-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tp-thought-block {
+  font-size: 12px;
+  color: var(--text-1, #f0f6fc);
+}
+
+.tp-thought-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3, #6e7681);
+  margin: 0 0 5px 0;
+}
+
+.tp-thought-list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.55;
+  color: var(--text-2, #8b949e);
+}
+
+.tp-thought-list li strong {
+  color: var(--text-1, #f0f6fc);
+}
+
+.tp-rationale {
+  color: var(--text-3, #6e7681);
+  font-style: italic;
+}
+
+.tp-thought-empty {
+  font-size: 11px;
+  color: var(--text-3, #6e7681);
+  margin: 0;
+  font-style: italic;
+}
+
+.tp-thought-block--warn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(248, 81, 73, 0.08);
+  border: 1px solid rgba(248, 81, 73, 0.2);
+}
+
+.tp-debate-round {
+  background: var(--bg-2, #161b22);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tp-debate-round-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-3, #6e7681);
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.tp-debate-turn {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-1, #0d1117);
+  font-size: 12px;
+}
+
+.tp-debate-turn--tl {
+  border-left: 3px solid #bc8cff;
+}
+
+.tp-debate-turn--pm {
+  border-left: 3px solid #4f8ef7;
+}
+
+.tp-turn-speaker {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-1, #f0f6fc);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.tp-turn-text {
+  margin: 0;
+  color: var(--text-2, #8b949e);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.tp-synthesis-text {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--text-1, #f0f6fc);
+}

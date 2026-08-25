@@ -902,4 +902,98 @@
   font-weight: 400;
 }
 
+/* ── Live Inner Thoughts Button & Badge ── */
+.live-header-btn--thoughts {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.live-header-btn--thoughts:hover {
+  background: var(--bg-4);
+  border-color: var(--accent);
+}
+
+.live-header-btn--active {
+  background: rgba(79, 142, 247, 0.15) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.live-brain-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  animation: livePulse 1.2s infinite alternate;
+}
+
+.live-thoughts-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.live-clarity-btn--thoughts {
+  background: rgba(79, 142, 247, 0.1);
+  border-color: rgba(79, 142, 247, 0.35);
+  color: var(--accent);
+}
+
+.live-clarity-btn--thoughts:hover {
+  background: rgba(79, 142, 247, 0.2);
+  border-color: var(--accent);
+}
+
+.live-clarity-reasoning-toggle {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.live-clarity-reasoning-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.live-clarity-reasoning-btn:hover {
+  background: var(--bg-4);
+  color: var(--text-1);
+}
+
+.live-clarity-reasoning-content {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
 

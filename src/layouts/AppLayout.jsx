@@ -8,6 +8,8 @@ import { NavLink, Link, Outlet, useParams, useNavigate } from 'react-router-dom'
 import { getMeetings, getTeam, getTeams } from '../api'
 import { useAuth } from '../contexts/AuthContext'
 import { meetingToCard } from '../utils'
+import UserSetupModal from '../components/UserSetupModal'
+import TeamSetupModal from '../components/TeamSetupModal'
 import './AppLayout.css'
 
 /**
@@ -46,7 +48,27 @@ export default function AppLayout() {
   const [teamNotFound, setTeamNotFound] = useState(false)
   const [allTeams, setAllTeams] = useState([])
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showUserSetup, setShowUserSetup] = useState(false)
+  const [showTeamSetup, setShowTeamSetup] = useState(false)
   const userMenuRef = useRef(null)
+
+  useEffect(() => {
+    if (user?.id) {
+      const userDone = localStorage.getItem(`mm_user_setup_completed_${user.id}`)
+      if (!userDone) {
+        setShowUserSetup(true)
+      }
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (teamId && user?.id && team && !showUserSetup) {
+      const teamDone = localStorage.getItem(`mm_team_setup_completed_${user.id}_${teamId}`)
+      if (!teamDone) {
+        setShowTeamSetup(true)
+      }
+    }
+  }, [teamId, user?.id, team, showUserSetup])
 
 
   useEffect(() => {
@@ -253,6 +275,17 @@ export default function AppLayout() {
                 New team
               </button>
               <div className="sidebar-user-menu-divider" />
+              <button
+                className="sidebar-user-menu-item"
+                onClick={() => { setShowUserSetup(true); setShowUserMenu(false) }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                Edit Profile & Setup
+              </button>
+              <div className="sidebar-user-menu-divider" />
               <button className="sidebar-user-menu-item" onClick={handleLogout}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -269,6 +302,17 @@ export default function AppLayout() {
       <main className="app-main">
         <Outlet />
       </main>
+
+      {showUserSetup && (
+        <UserSetupModal onClose={() => setShowUserSetup(false)} />
+      )}
+      {showTeamSetup && !showUserSetup && teamId && (
+        <TeamSetupModal
+          teamId={teamId}
+          teamData={team}
+          onClose={() => setShowTeamSetup(false)}
+        />
+      )}
     </div>
   )
 }

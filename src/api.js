@@ -64,6 +64,17 @@ async function apiFetch(path, options = {}) {
     return apiFetch('/api/auth/me')
   }
 
+  export async function updateMe({ name, photoB64 } = {}) {
+    const payload = {}
+    if (name !== undefined) payload.name = name
+    if (photoB64 !== undefined) payload.photo_b64 = photoB64
+    return apiFetch('/api/auth/me', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  }
+
   export async function login(email, password) {
     return apiFetch('/api/auth/login', {
       method: 'POST',
@@ -228,6 +239,55 @@ async function apiFetch(path, options = {}) {
     return apiFetch(`/api/meetings/${meetingId}/transcript`)
   }
 
+  export async function redoSummary(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}/resummarize`, {
+      method: 'POST',
+    })
+  }
+
+  export async function stopSummary(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}/stop-summary`, {
+      method: 'POST',
+    })
+  }
+
+  export async function getSummaryThoughts(meetingId) {
+    return apiFetch(`/api/meetings/${meetingId}/summary-thoughts`)
+  }
+
+  export async function updateTranscriptChunk(meetingId, chunkId, { speaker, text }) {
+    const body = {}
+    if (speaker !== undefined) body.speaker = speaker
+    if (text !== undefined) body.text = text
+    return apiFetch(`/api/meetings/${meetingId}/transcript/${chunkId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  }
+
+  export async function revertTranscriptChunk(meetingId, chunkId) {
+    return apiFetch(`/api/meetings/${meetingId}/transcript/${chunkId}/revert`, {
+      method: 'POST',
+    })
+  }
+
+  export async function deleteTranscriptChunk(meetingId, chunkId) {
+    return apiFetch(`/api/meetings/${meetingId}/transcript/${chunkId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  export async function createTranscriptChunk(meetingId, { speaker, text, timestamp = null }) {
+    const body = { speaker, text }
+    if (timestamp) body.timestamp = timestamp
+    return apiFetch(`/api/meetings/${meetingId}/transcript`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  }
+
   export async function explainMeeting(meetingId, mode, lastXMinutes = null) {
     const payload = { mode }
     if (lastXMinutes !== null) payload.last_x_minutes = lastXMinutes
@@ -302,9 +362,7 @@ async function apiFetch(path, options = {}) {
     })
   }
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────────
-
-  export function openInsightSocket(meetingId, { onChunk, onChunksSnapshot, onInsight, onProposal, onOpen, onClose } = {}) {
+  export function openInsightSocket(meetingId, { onChunk, onChunksSnapshot, onInsight, onProposal, onAgentThought, onOpen, onClose } = {}) {
     const ws = new WebSocket(`${wsBase()}/api/ws/ingest/${meetingId}`)
 
     ws.onopen = () => onOpen?.()
@@ -323,6 +381,10 @@ async function apiFetch(path, options = {}) {
           onInsight?.({ role: msgData.role, text: msgData.text })
         } else if (event === 'proposal') {
           onProposal?.(msgData)
+        } else if (event === 'agent_thought' || msg.type === 'agent_thought') {
+          onAgentThought?.(msgData || msg.thought)
+        } else if (event === 'summary_thought' || msg.type === 'summary_thought') {
+          onAgentThought?.(msgData || msg.thought)
         }
       } catch (e) {
         console.warn('[WS] failed to parse message', e)

@@ -5,9 +5,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getMeeting, getTranscript, getActions, renameMeeting, updateAction, getTopics, addMeetingTopic, removeMeetingTopic, getMembers, getEmailPreview, sendMeetingEmail } from '../api'
+import { getMeeting, getTranscript, getActions, renameMeeting, updateAction, getTopics, addMeetingTopic, removeMeetingTopic, getMembers, getEmailPreview, sendMeetingEmail, redoSummary, stopSummary, updateTranscriptChunk, revertTranscriptChunk, deleteTranscriptChunk, createTranscriptChunk } from '../api'
 import { parseScrumMaster, formatMeetingTitle, formatDate } from '../utils'
 import MeetingTopicTags from '../components/MeetingTopicTags'
+import SummaryProgressIndicator from '../components/SummaryProgressIndicator'
+import ThinkingProcess, { FormattedMarkdown } from '../components/ThinkingProcess'
 import './Review.css'
 
 /**
@@ -181,6 +183,18 @@ function Review() {
   const [meetingData, setMeetingData] = useState(null)
   const [chunks, setChunks] = useState([])
   const [loading, setLoading] = useState(!!parsedMeetingId)
+  const [canEdit, setCanEdit] = useState(false)
+  const [redoLoading, setRedoLoading] = useState(false)
+  const [redoFeedback, setRedoFeedback] = useState(null)
+  const [transcriptHint, setTranscriptHint] = useState(null)
+  const [editingChunkId, setEditingChunkId] = useState(null)
+  const [editSpeaker, setEditSpeaker] = useState('')
+  const [editText, setEditText] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const [addingChunk, setAddingChunk] = useState(false)
+  const [newSpeaker, setNewSpeaker] = useState('')
+  const [newText, setNewText] = useState('')
+  const [addSaving, setAddSaving] = useState(false)
   const [titleEditing, setTitleEditing] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [proposals, setProposals] = useState({})
@@ -198,6 +212,7 @@ function Review() {
   const [emailSending, setEmailSending] = useState(false)
   const [emailSentOk, setEmailSentOk] = useState(false)
   const [emailError, setEmailError] = useState(null)
+  const [redoStartedAt, setRedoStartedAt] = useState(null)
 
   const recipientPickerRef = useRef(null)
   const emailSectionRef = useRef(null)
@@ -291,9 +306,15 @@ function Review() {
           fetchedMeeting = meetingRes.value
           setMeetingData(fetchedMeeting)
           setMeetingTopics(fetchedMeeting.topics ?? [])
+          if (fetchedMeeting.can_edit !== undefined) {
+            setCanEdit(Boolean(fetchedMeeting.can_edit))
+          }
         }
         if (transcriptRes.status === 'fulfilled') {
           setChunks(transcriptRes.value.chunks ?? [])
+          if (transcriptRes.value.can_edit !== undefined) {
+            setCanEdit(Boolean(transcriptRes.value.can_edit))
+          }
         }
         if (actionsRes.status === 'fulfilled') {
           const actions = actionsRes.value
@@ -365,9 +386,9 @@ function Review() {
             .catch(() => {})
         }
       } catch (e) { console.warn(e) }
-    }, 5000)
+    }, 4000)
     return () => clearInterval(t)
-  }, [parsedMeetingId, meetingData?.status])
+  }, [parsedMeetingId, meetingData?.status, meetingData?.summary])
 
 
   const taskItems     = tasks.filter((t) => t.type === 'todo')
@@ -403,6 +424,196 @@ function Review() {
     const newTags = task.tags?.includes(tag) ? task.tags.filter(t => t !== tag) : [...(task.tags || []), tag]
     updateTask(id, { tags: newTags })
     try { await updateAction(parsedMeetingId, id, undefined, undefined, undefined, undefined, newTags) } catch (e) { console.warn(e) }
+  }
+
+  const handleStopSummary = async () => {
+    if (!parsedMeetingId) return
+    try {
+      await stopSummary(parsedMeetingId)
+      setRedoFeedback('Summary generation was cancelled.')
+      setTimeout(() => setRedoFeedback(null), 3000)
+    } catch (e) {
+      console.warn('[Review] stop summary error:', e)
+    } finally {
+      setRedoLoading(false)
+      setRedoStartedAt(null)
+      getMeeting(parsedMeetingId).then((m) => {
+        if (m) setMeetingData(m)
+      }).catch(() => {})
+    }
+  }
+
+  const handleRedoSummary = async () => {
+    if (redoLoading || !parsedMeetingId) return
+    setRedoLoading(true)
+    setRedoFeedback(null)
+    setRedoStartedAt(Date.now() / 1000)
+    setMeetingData((prev) => (prev ? { ...prev, summary: null, is_summarizing: true } : prev))
+    try {
+      const res = await redoSummary(parsedMeetingId)
+      if (res.meeting && res.meeting.summary) {
+        setMeetingData(res.meeting)
+        setMeetingTopics(res.meeting.topics ?? [])
+        if (res.meeting.can_edit !== undefined) setCanEdit(Boolean(res.meeting.can_edit))
+        const actions = await getActions(parsedMeetingId).catch(() => null)
+        if (actions) {
+          setProposals(actions)
+          const built = proposalToTasks(actions, res.meeting?.title || meetingData?.title)
+          if (built.length > 0) {
+            setTasks(built)
+          } else if (res.meeting) {
+            const fallback = summaryToTasks(res.meeting)
+            if (fallback.length > 0) setTasks(fallback)
+          }
+        }
+        getEmailPreview(parsedMeetingId)
+          .then(({ html }) => setEmailHtml(html))
+          .catch(() => {})
+        setRedoFeedback('Summary regenerated successfully!')
+        setTimeout(() => setRedoFeedback(null), 4000)
+        setTranscriptHint(null)
+        setRedoLoading(false)
+        setRedoStartedAt(null)
+        return
+      }
+
+      // Start active poll timer until background multi-agent synthesis completes
+      const pollInterval = setInterval(async () => {
+        try {
+          const latest = await getMeeting(parsedMeetingId)
+          if (latest && latest.summary) {
+            clearInterval(pollInterval)
+            setMeetingData(latest)
+            setMeetingTopics(latest.topics ?? [])
+            if (latest.can_edit !== undefined) setCanEdit(Boolean(latest.can_edit))
+            getTranscript(parsedMeetingId)
+              .then((tr) => setChunks(tr.chunks ?? []))
+              .catch(() => {})
+            getActions(parsedMeetingId)
+              .then((actions) => {
+                setProposals(actions)
+                const built = proposalToTasks(actions, latest.title)
+                if (built.length > 0) {
+                  setTasks(built)
+                } else {
+                  const fallback = summaryToTasks(latest)
+                  if (fallback.length > 0) setTasks(fallback)
+                }
+              })
+              .catch(() => {})
+            getEmailPreview(parsedMeetingId)
+              .then(({ html }) => setEmailHtml(html))
+              .catch(() => {})
+            setRedoFeedback('Summary regenerated successfully!')
+            setTimeout(() => setRedoFeedback(null), 4000)
+            setTranscriptHint(null)
+            setRedoLoading(false)
+            setRedoStartedAt(null)
+          }
+        } catch (pollErr) {
+          console.warn('[handleRedoSummary] poll error:', pollErr)
+        }
+      }, 3000)
+
+      // Auto-clear poll after 5 minutes if unresolved
+      setTimeout(() => {
+        clearInterval(pollInterval)
+        setRedoLoading((loading) => {
+          if (loading) {
+            setRedoFeedback('Summary generation is taking longer than expected. Please check back shortly.')
+          }
+          return false
+        })
+      }, 300000)
+    } catch (err) {
+      console.error('Failed to redo summary:', err)
+      setRedoFeedback(`Failed to redo summary: ${err.message || 'Error'}`)
+      setRedoLoading(false)
+      setRedoStartedAt(null)
+    }
+  }
+
+  const startEditChunk = (chunk) => {
+    setEditingChunkId(chunk.id)
+    setEditSpeaker(chunk.speaker || '')
+    setEditText(chunk.text || '')
+  }
+
+  const cancelEditChunk = () => {
+    setEditingChunkId(null)
+    setEditSpeaker('')
+    setEditText('')
+  }
+
+  const saveEditChunk = async (chunkId) => {
+    if (!editSpeaker.trim() || !editText.trim()) return
+    setEditSaving(true)
+    try {
+      const res = await updateTranscriptChunk(parsedMeetingId, chunkId, {
+        speaker: editSpeaker.trim(),
+        text: editText.trim(),
+      })
+      if (res.chunk) {
+        setChunks((prev) =>
+          prev.map((c) => (c.id === chunkId ? { ...c, ...res.chunk } : c))
+        )
+        setTranscriptHint('Transcript updated. Click "Redo Summary" to refresh AI insights.')
+      }
+      setEditingChunkId(null)
+    } catch (err) {
+      alert(`Failed to save edit: ${err.message || 'Error'}`)
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  const handleRevertChunk = async (chunkId) => {
+    if (!window.confirm('Revert this utterance back to its original version?')) return
+    try {
+      const res = await revertTranscriptChunk(parsedMeetingId, chunkId)
+      if (res.chunk) {
+        setChunks((prev) =>
+          prev.map((c) => (c.id === chunkId ? { ...c, ...res.chunk } : c))
+        )
+        setTranscriptHint('Transcript reverted. Click "Redo Summary" to refresh AI insights.')
+      }
+    } catch (err) {
+      alert(`Failed to revert: ${err.message || 'Error'}`)
+    }
+  }
+
+  const handleDeleteChunk = async (chunkId) => {
+    if (!window.confirm('Are you sure you want to delete this utterance?')) return
+    try {
+      await deleteTranscriptChunk(parsedMeetingId, chunkId)
+      setChunks((prev) => prev.filter((c) => c.id !== chunkId))
+      setTranscriptHint('Transcript updated. Click "Redo Summary" to refresh AI insights.')
+    } catch (err) {
+      alert(`Failed to delete utterance: ${err.message || 'Error'}`)
+    }
+  }
+
+  const handleAddChunk = async (e) => {
+    e?.preventDefault()
+    if (!newSpeaker.trim() || !newText.trim()) return
+    setAddSaving(true)
+    try {
+      const res = await createTranscriptChunk(parsedMeetingId, {
+        speaker: newSpeaker.trim(),
+        text: newText.trim(),
+      })
+      if (res.chunk) {
+        setChunks((prev) => [...prev, res.chunk])
+        setNewSpeaker('')
+        setNewText('')
+        setAddingChunk(false)
+        setTranscriptHint('Utterance added. Click "Redo Summary" to refresh AI insights.')
+      }
+    } catch (err) {
+      alert(`Failed to add utterance: ${err.message || 'Error'}`)
+    } finally {
+      setAddSaving(false)
+    }
   }
 
   useEffect(() => {
@@ -512,17 +723,69 @@ function Review() {
         <div className="rv-summary">
           <div className="rv-summary-header">
             <div className="rv-summary-title-row">
-              <span className="rv-section-label">AI Meeting Summary</span>
-              {meetingData?.summary && (
-                <button className="rv-email-btn" onClick={() => emailSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
+              <div className="rv-summary-title-left">
+                <span className="rv-section-label">AI Meeting Summary</span>
+                <span className="rv-disclaimer-pill" title="Generated by AI models. Verify critical information against the transcript.">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                   </svg>
-                  Email Team
-                </button>
-              )}
+                  AI Generated
+                </span>
+              </div>
+              <div className="rv-summary-actions">
+                {canEdit && (
+                  <button
+                    className={`rv-redo-btn ${redoLoading ? 'rv-redo-btn--loading' : ''}`}
+                    onClick={handleRedoSummary}
+                    disabled={redoLoading}
+                    title="Regenerate AI summary, decisions, and action items from current transcript"
+                  >
+                    <svg className={redoLoading ? 'rv-spin' : ''} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M23 4v6h-6" />
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    {redoLoading ? 'Regenerating…' : 'Redo Summary'}
+                  </button>
+                )}
+                {meetingData?.summary && (
+                  <button className="rv-email-btn" onClick={() => emailSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                    Email Team
+                  </button>
+                )}
+              </div>
             </div>
+
+            <div className="rv-ai-disclaimer-banner" style={{ marginTop: '12px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <span>
+                <strong>AI Disclaimer:</strong> Insights, summaries, and action items are generated by AI and may contain inaccuracies. Verify critical details against the transcript.
+              </span>
+            </div>
+
+            {redoFeedback && (
+              <div className={`rv-redo-feedback ${redoFeedback.startsWith('Failed') ? 'rv-redo-feedback--error' : 'rv-redo-feedback--success'}`}>
+                {redoFeedback}
+              </div>
+            )}
+
+            {transcriptHint && (
+              <div className="rv-transcript-hint-banner">
+                <span>{transcriptHint}</span>
+                {canEdit && (
+                  <button className="rv-transcript-hint-redo-btn" onClick={handleRedoSummary} disabled={redoLoading}>
+                    Redo Summary Now
+                  </button>
+                )}
+              </div>
+            )}
 
             {(meetingTopics.length > 0 || teamTopics.length > 0) && (
               <div className="rv-summary-tags">
@@ -533,6 +796,13 @@ function Review() {
                   onRemove={handleRemoveTopic}
                 />
               </div>
+            )}
+
+            {meetingData?.summary && (
+              <ThinkingProcess
+                summary={meetingData.summary}
+                discussionLog={meetingData.discussion_log || []}
+              />
             )}
 
             {meetingData?.summary && (
@@ -557,7 +827,32 @@ function Review() {
               Loading summary...
             </div>
           )}
-          {!loading && meetingData?.summary && summaryTab === 'general' && (() => {
+          {redoLoading && (
+            <SummaryProgressIndicator
+              meetingId={parsedMeetingId}
+              title="Regenerating AI Summary & Action Items"
+              subtitle="Re-analyzing transcript, running persona deliberation, and updating synthesis..."
+              startedAt={redoStartedAt || meetingData?.summarizing_started_at}
+              onStop={handleStopSummary}
+              initialThoughts={meetingData?.live_summary_thoughts || []}
+            />
+          )}
+          {!loading && !redoLoading && !meetingData?.summary && meetingData?.status === 'completed' && (
+            <SummaryProgressIndicator
+              meetingId={parsedMeetingId}
+              title="Generating AI Meeting Summary"
+              subtitle="Multi-agent orchestration in progress — this may take a moment..."
+              startedAt={meetingData?.summarizing_started_at}
+              onStop={canEdit ? handleStopSummary : undefined}
+              initialThoughts={meetingData?.live_summary_thoughts || []}
+            />
+          )}
+          {!loading && !redoLoading && !meetingData?.summary && meetingData?.status !== 'completed' && (
+            <div style={{ padding: '24px', color: 'var(--text-3)', fontSize: '13px' }}>
+              Summary will be generated when the meeting ends.
+            </div>
+          )}
+          {!loading && !redoLoading && meetingData?.summary && summaryTab === 'general' && (() => {
             const sm = parseScrumMaster(meetingData?.summary?.scrum_master)
             if (!sm) return null
             return (
@@ -581,7 +876,9 @@ function Review() {
                       Action Items
                     </h4>
                     <ul className="rv-summary-list">
-                      {sm.to_do.map((t, i) => <li key={i}>{typeof t === 'string' ? t : `${t.task}${t.owner ? ` — ${t.owner}` : ''}`}</li>)}
+                      {sm.to_do.map((t, i) => (
+                        <li key={i}>{typeof t === 'string' ? t : `${t.task}${t.owner ? ` — ${t.owner}` : ''}`}</li>
+                      ))}
                     </ul>
                   </div>
                 )}
@@ -594,7 +891,9 @@ function Review() {
                       Parking Lot
                     </h4>
                     <ul className="rv-summary-list rv-summary-list--warn">
-                      {sm.parking_lot.map((t, i) => <li key={i}>{typeof t === 'string' ? t : (t.task ?? String(t))}</li>)}
+                      {sm.parking_lot.map((t, i) => (
+                        <li key={i}>{typeof t === 'string' ? t : (t.task ?? String(t))}</li>
+                      ))}
                     </ul>
                   </div>
                 )}
@@ -610,7 +909,9 @@ function Review() {
                         Accepted Proposals
                       </h4>
                       <ul className="rv-summary-list">
-                        {allAccepted.map((p, i) => <li key={i}>{p.content}</li>)}
+                        {allAccepted.map((p, i) => (
+                          <li key={i}>{p.content}</li>
+                        ))}
                       </ul>
                     </div>
                   )
@@ -618,7 +919,7 @@ function Review() {
               </div>
             )
           })()}
-          {!loading && meetingData?.summary && summaryTab === 'technical' && (() => {
+          {!loading && !redoLoading && meetingData?.summary && summaryTab === 'technical' && (() => {
             const tl = parseScrumMaster(meetingData?.summary?.tech_lead)
             if (!tl) return null
             return (
@@ -648,7 +949,9 @@ function Review() {
                       Architecture
                     </h4>
                     <ul className="rv-summary-list">
-                      {tl.architecture.map((a, i) => <li key={i}>{a}</li>)}
+                      {tl.architecture.map((a, i) => (
+                        <li key={i}>{a}</li>
+                      ))}
                     </ul>
                   </div>
                 )}
@@ -670,7 +973,7 @@ function Review() {
               </div>
             )
           })()}
-          {!loading && meetingData?.summary && summaryTab === 'business' && (() => {
+          {!loading && !redoLoading && meetingData?.summary && summaryTab === 'business' && (() => {
             const pm = parseScrumMaster(meetingData?.summary?.product_manager)
             if (!pm) return null
             return (
@@ -724,13 +1027,6 @@ function Review() {
               </div>
             )
           })()}
-          {!loading && !meetingData?.summary && (
-            <div style={{ padding: '24px', color: 'var(--text-3)', fontSize: '13px' }}>
-              {meetingData?.status === 'completed'
-                ? 'Generating final summary... this may take a moment.'
-                : 'Summary will be generated when the meeting ends.'}
-            </div>
-          )}
         </div>
 
         <div className="rv-actions-section">
@@ -779,6 +1075,7 @@ function Review() {
                 : activeTab === 'schedule'
                 ? 'Confirm meetings to schedule'
                 : 'Review deferred topics'}
+              <span className="rv-ai-kanban-disclaimer">· ✦ AI suggestions</span>
             </span>
           </div>
 
@@ -908,7 +1205,11 @@ function Review() {
               speaker: c.speaker,
               role: '',
               text: c.text,
-              timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              timestamp: c.timestamp ? new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+              is_edited: c.is_edited,
+              original_text: c.original_text,
+              original_speaker: c.original_speaker,
+              edited_at: c.edited_at,
             }))
             const allSuggestions = tasks.map((t) => ({ ...t }))
             return (
@@ -918,18 +1219,36 @@ function Review() {
                     <span className="rv-section-label">Full Transcript</span>
                     <span className="rv-transcript-count" style={{ marginLeft: '12px' }}>{feed.length} messages</span>
                   </div>
-                  <button
-                    className={`rv-email-expand-btn${transcriptExpanded ? ' rv-email-expand-btn--open' : ''}`}
-                    onClick={() => setTranscriptExpanded((v) => !v)}
-                  >
-                    <svg
-                      className={`rv-email-chevron${transcriptExpanded ? ' rv-email-chevron--open' : ''}`}
-                      width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  <div className="rv-transcript-header-right">
+                    {canEdit && (
+                      <button
+                        className="rv-add-chunk-btn"
+                        onClick={() => {
+                          setTranscriptExpanded(true)
+                          setAddingChunk((v) => !v)
+                        }}
+                        title="Add an utterance to the transcript"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Add Line
+                      </button>
+                    )}
+                    <button
+                      className={`rv-email-expand-btn${transcriptExpanded ? ' rv-email-expand-btn--open' : ''}`}
+                      onClick={() => setTranscriptExpanded((v) => !v)}
                     >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                    {transcriptExpanded ? 'Collapse' : 'Expand'}
-                  </button>
+                      <svg
+                        className={`rv-email-chevron${transcriptExpanded ? ' rv-email-chevron--open' : ''}`}
+                        width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                      {transcriptExpanded ? 'Collapse' : 'Expand'}
+                    </button>
+                  </div>
                 </div>
 
                 {transcriptExpanded && allSuggestions.length > 0 && (
@@ -971,37 +1290,177 @@ function Review() {
                 )}
 
                 {transcriptExpanded && (
-                <div className="rv-transcript-feed">
-                  {feed.length === 0 && (
-                    <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
-                      {loading ? 'Loading transcript...' : 'No transcript available.'}
-                    </div>
-                  )}
-                  {feed.map((msg, i) => {
-                    const isFirst = i === 0 || feed[i - 1].speaker !== msg.speaker
-                    return (
-                      <div className={`rv-msg${isFirst ? '' : ' rv-msg--continuation'}`} key={msg.id}>
-                        {isFirst ? (
-                          <div className="rv-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
-                            {speakerInitials(msg.speaker)}
-                          </div>
-                        ) : (
-                          <div className="rv-msg-avatar-spacer" />
-                        )}
-                        <div className="rv-msg-body">
-                          {isFirst && (
-                            <div className="rv-msg-meta">
-                              <span className="rv-msg-speaker">{msg.speaker}</span>
-                              {msg.role && <span className="rv-msg-role">{msg.role}</span>}
-                              <span className="rv-msg-time">{msg.timestamp}</span>
-                            </div>
-                          )}
-                          <div className="rv-msg-text">{msg.text}</div>
+                  <>
+                    <div className="rv-transcript-feed">
+                      {feed.length === 0 && !addingChunk && (
+                        <div style={{ padding: '32px', color: 'var(--text-3)', fontSize: '13px', textAlign: 'center' }}>
+                          {loading ? 'Loading transcript...' : 'No transcript available.'}
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )}
+                      {feed.map((msg, i) => {
+                        const isFirst = i === 0 || feed[i - 1].speaker !== msg.speaker
+                        const isEditing = editingChunkId === msg.id
+                        return (
+                          <div className={`rv-msg${isFirst ? '' : ' rv-msg--continuation'}`} key={msg.id}>
+                            {isFirst ? (
+                              <div className="rv-msg-avatar" style={{ background: speakerColor(msg.speaker) }}>
+                                {speakerInitials(msg.speaker)}
+                              </div>
+                            ) : (
+                              <div className="rv-msg-avatar-spacer" />
+                            )}
+                            <div className="rv-msg-body">
+                              {isEditing ? (
+                                <div className="rv-msg-edit-form">
+                                  <div className="rv-msg-edit-header">
+                                    <input
+                                      className="rv-msg-edit-speaker"
+                                      value={editSpeaker}
+                                      onChange={(e) => setEditSpeaker(e.target.value)}
+                                      placeholder="Speaker Name"
+                                      disabled={editSaving}
+                                    />
+                                    <span className="rv-msg-edit-hint">Enter to save, Esc to cancel</span>
+                                  </div>
+                                  <textarea
+                                    className="rv-msg-edit-textarea"
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault()
+                                        saveEditChunk(msg.id)
+                                      }
+                                      if (e.key === 'Escape') {
+                                        cancelEditChunk()
+                                      }
+                                    }}
+                                    autoFocus
+                                    rows={3}
+                                    disabled={editSaving}
+                                  />
+                                  <div className="rv-msg-edit-actions">
+                                    <button
+                                      type="button"
+                                      className="rv-card-btn rv-card-btn--cancel"
+                                      onClick={cancelEditChunk}
+                                      disabled={editSaving}
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="rv-card-btn rv-card-btn--save"
+                                      onClick={() => saveEditChunk(msg.id)}
+                                      disabled={editSaving}
+                                    >
+                                      {editSaving ? 'Saving…' : 'Save'}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="rv-msg-meta">
+                                    <span className="rv-msg-speaker">{msg.speaker}</span>
+                                    {msg.role && <span className="rv-msg-role">{msg.role}</span>}
+                                    {msg.is_edited && (
+                                      <span
+                                        className="rv-msg-edited-badge"
+                                        title={
+                                          msg.original_text
+                                            ? `Original: "${msg.original_text}"${msg.original_speaker ? ` (${msg.original_speaker})` : ''}`
+                                            : 'Edited by admin'
+                                        }
+                                      >
+                                        (edited)
+                                      </span>
+                                    )}
+                                    <span className="rv-msg-time">{msg.timestamp}</span>
+                                    {canEdit && (
+                                      <div className="rv-msg-actions">
+                                        {msg.is_edited && msg.original_text && (
+                                          <button
+                                            className="rv-msg-action-btn rv-msg-action-btn--revert"
+                                            onClick={() => handleRevertChunk(msg.id)}
+                                            title={`Revert to original: "${msg.original_text}"`}
+                                          >
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                              <polyline points="1 4 1 10 7 10" />
+                                              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                            </svg>
+                                            Revert
+                                          </button>
+                                        )}
+                                        <button
+                                          className="rv-msg-action-btn rv-msg-action-btn--edit"
+                                          onClick={() => startEditChunk(msg)}
+                                          title="Edit utterance"
+                                        >
+                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                          </svg>
+                                          Edit
+                                        </button>
+                                        <button
+                                          className="rv-msg-action-btn rv-msg-action-btn--delete"
+                                          onClick={() => handleDeleteChunk(msg.id)}
+                                          title="Delete utterance"
+                                        >
+                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="rv-msg-text">{msg.text}</div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {addingChunk && (
+                      <form className="rv-add-chunk-form" onSubmit={handleAddChunk}>
+                        <div className="rv-add-chunk-title">Add Utterance to Transcript</div>
+                        <input
+                          className="rv-msg-edit-speaker"
+                          value={newSpeaker}
+                          onChange={(e) => setNewSpeaker(e.target.value)}
+                          placeholder="Speaker Name (e.g. John)"
+                          required
+                          disabled={addSaving}
+                          autoFocus
+                        />
+                        <textarea
+                          className="rv-msg-edit-textarea"
+                          value={newText}
+                          onChange={(e) => setNewText(e.target.value)}
+                          placeholder="Utterance text..."
+                          rows={2}
+                          required
+                          disabled={addSaving}
+                        />
+                        <div className="rv-msg-edit-actions">
+                          <button
+                            type="button"
+                            className="rv-card-btn rv-card-btn--cancel"
+                            onClick={() => setAddingChunk(false)}
+                            disabled={addSaving}
+                          >
+                            Cancel
+                          </button>
+                          <button type="submit" className="rv-card-btn rv-card-btn--save" disabled={addSaving}>
+                            {addSaving ? 'Adding…' : 'Add Line'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </>
                 )}
               </>
             )

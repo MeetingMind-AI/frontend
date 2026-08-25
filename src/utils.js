@@ -57,15 +57,23 @@ export function meetingToCard(m) {
   const sm = parseScrumMaster(m.summary?.scrum_master)
   let durationDisplay = m.status
   if (m.status === 'needs_human_help') durationDisplay = 'Blocked (Lobby)'
+  const isSummarizing = Boolean(
+    m.is_summarizing ||
+    m.status === 'processing' ||
+    (m.status === 'completed' && !m.summary)
+  )
   return {
     id: m.id,
     title: formatMeetingTitle(m.title),
     date: formatDate(m.created_at),
     duration: durationDisplay,
-    reviewed: m.status === 'completed',
+    reviewed: m.status === 'completed' && !isSummarizing,
+    isSummarizing,
     actionItemCount: sm?.to_do?.length ?? 0,
     parkingLotCount: sm?.parking_lot?.length ?? 0,
-    summary: sm?.summary ?? (m.status !== 'completed' ? 'Meeting in progress...' : 'No summary available.'),
+    summary: isSummarizing
+      ? 'Generating AI summary...'
+      : sm?.summary ?? (m.status !== 'completed' ? 'Meeting in progress...' : 'No summary available.'),
     topics: m.topics ?? [],
     speakers: m.speakers ?? [],
   }
@@ -112,7 +120,8 @@ export function buildKanbanTasks(actions) {
       kanban_status: col,
       assignee: p.assignee,
       status: p.status,
-      tags: p.tags || []
+      tags: p.tags || [],
+      topics: p.topics || [],
     })
   }
   return items
@@ -136,6 +145,7 @@ export function buildParkingLotItems(actions) {
       status: 'open',
       assignee: p.assignee,
       tags: p.tags || [],
+      topics: p.topics || [],
     })
   }
   return items
@@ -159,6 +169,7 @@ export function buildScheduleItems(actions) {
       schedule_status: 'pending',
       assignee: p.assignee,
       tags: p.tags || [],
+      topics: p.topics || [],
     })
   }
   return items
@@ -182,6 +193,7 @@ export function buildArchiveItems(actions) {
         action_type: type,
         assignee: p.assignee,
         tags: p.tags || [],
+        topics: p.topics || [],
       })
     }
   }

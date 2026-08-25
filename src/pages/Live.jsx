@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction, getMeeting, deleteMeeting } from '../api'
 import MiniPipContent from './MiniPipContent'
+import LiveThinkingPanel from '../components/LiveThinkingPanel'
 import './Live.css'
 
 /** Label lookup for proposal types. */
@@ -87,6 +88,19 @@ function Live() {
   const [pendingProposals, setPendingProposals] = useState([])
   const [acceptedProposals, setAcceptedProposals] = useState([])
   const [pipError, setPipError] = useState(null)
+  const [showThinkingPanel, setShowThinkingPanel] = useState(false)
+  const [liveThoughts, setLiveThoughts] = useState([])
+
+  const addThought = useCallback((thought) => {
+    setLiveThoughts((prev) => [
+      ...prev.slice(-150),
+      {
+        id: `th-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        ...thought,
+      },
+    ])
+  }, [])
 
   const meetingTitle = parsedMeetingId ? `Meeting #${parsedMeetingId}` : 'Live Meeting'
 
@@ -113,6 +127,11 @@ function Live() {
     const ws = openInsightSocket(parsedMeetingId, {
       onOpen: () => {
         setWsStatus('connected')
+        addThought({
+          agent: 'scrum_master',
+          title: 'WebSocket Connected',
+          text: 'Real-time multi-agent meeting monitor initialized. Listening to speaker turns & context.',
+        })
         // Catch up on proposals that were generated before the WS connected
         getActions(parsedMeetingId).then((actions) => {
           const allPending = [
@@ -138,9 +157,23 @@ function Live() {
           }
         })
       },
-      onClose: () => setWsStatus('disconnected'),
+      onClose: () => {
+        setWsStatus('disconnected')
+        addThought({
+          agent: 'scrum_master',
+          title: 'WebSocket Disconnected',
+          text: 'Live transcription connection closed.',
+        })
+      },
       onChunksSnapshot: (chunks) => {
         setTranscript(chunks.map(mapChunk))
+        if (chunks.length > 0) {
+          addThought({
+            agent: 'scrum_master',
+            title: 'Transcript Snapshot Loaded',
+            text: `Ingested ${chunks.length} past speaker turns from database session.`,
+          })
+        }
       },
       onChunk: (chunk) => {
         setTranscript((prev) => {
@@ -154,17 +187,47 @@ function Live() {
           }
           return [...prev, mapped]
         })
+
+        const textPreview = chunk.text && chunk.text.length > 70 ? `${chunk.text.slice(0, 70)}…` : chunk.text
+        addThought({
+          agent: 'scrum_master',
+          title: `Utterance Ingested: ${chunk.speaker || 'Speaker'}`,
+          text: `Analyzing statement: "${textPreview}" for actionable commitments or blockers.`,
+          metadata: { speaker: chunk.speaker, grounding: true },
+        })
+      },
+      onInsight: (insight) => {
+        addThought({
+          agent: insight.role || 'scrum_master',
+          title: 'Live Context Insight',
+          text: insight.text,
+          metadata: { grounding: true },
+        })
       },
       onProposal: (proposal) => {
         setPendingProposals((prev) => [...prev, proposal])
         setToastProposal(proposal)
         playProposalSound(proposal.type)
         channelRef.current?.postMessage({ type: 'proposal', proposal })
+        addThought({
+          agent: 'scrum_master',
+          title: `Proposal Identified: [${(proposal.type || 'TO DO').toUpperCase()}]`,
+          text: `Extracted proposal: "${proposal.content}". Prompting participants for approval.`,
+          metadata: { action: (proposal.type || 'TO DO').toUpperCase(), grounding: true },
+        })
+      },
+      onAgentThought: (thoughtData) => {
+        addThought({
+          agent: thoughtData.agent || 'scrum_master',
+          title: thoughtData.title || 'Agent Reasoning',
+          text: thoughtData.text,
+          metadata: { speaker: thoughtData.speaker, action: thoughtData.action, grounding: thoughtData.grounding },
+        })
       },
     })
     wsRef.current = ws
     return () => { ws.close(); wsRef.current = null }
-  }, [parsedMeetingId])
+  }, [parsedMeetingId, addThought])
 
 
 
@@ -302,9 +365,26 @@ function Live() {
   const handleExplainTechnical = async () => {
     if (!parsedMeetingId) return
     setExplainLoading(true)
+    const windowLabel = explainTime ? `last ${explainTime} minutes` : 'entire meeting'
+    addThought({
+      agent: 'tech_lead',
+      title: 'Instant Clarity: Technical Lens Activated',
+      text: `Ingesting transcript context for ${windowLabel}. Dissecting architectural trade-offs, engineering blockers, and system dependencies...`,
+    })
     try {
       const data = await explainMeeting(parsedMeetingId, 'technical', explainTime)
-      setModal({ type: 'clarity', title: 'Technical Summary', lines: data.explanation ? [data.explanation] : [] })
+      addThought({
+        agent: 'tech_lead',
+        title: 'Instant Clarity: Technical Synthesis Complete',
+        text: `Synthesized technical explanation based on ${windowLabel} transcript turns.`,
+        metadata: { grounding: true },
+      })
+      setModal({
+        type: 'clarity',
+        title: 'Technical Summary',
+        lines: data.explanation ? [data.explanation] : [],
+        reasoning: `Extracted architectural details, engineering dependencies, and code blockers from the ${windowLabel} conversation timeline.`,
+      })
     } catch (e) {
       console.error('[Live] explain technical failed:', e)
       setModal({ type: 'clarity', title: 'Error', lines: ['Failed to generate explanation. Please try again.'] })
@@ -316,9 +396,26 @@ function Live() {
   const handleExplainBusiness = async () => {
     if (!parsedMeetingId) return
     setExplainLoading(true)
+    const windowLabel = explainTime ? `last ${explainTime} minutes` : 'entire meeting'
+    addThought({
+      agent: 'product_manager',
+      title: 'Instant Clarity: Business Lens Activated',
+      text: `Ingesting transcript context for ${windowLabel}. Dissecting customer ROI, feature requirements, user workflow impact, and delivery milestones...`,
+    })
     try {
       const data = await explainMeeting(parsedMeetingId, 'business', explainTime)
-      setModal({ type: 'clarity', title: 'Business Summary', lines: data.explanation ? [data.explanation] : [] })
+      addThought({
+        agent: 'product_manager',
+        title: 'Instant Clarity: Business Synthesis Complete',
+        text: `Synthesized business explanation based on ${windowLabel} transcript turns.`,
+        metadata: { grounding: true },
+      })
+      setModal({
+        type: 'clarity',
+        title: 'Business Summary',
+        lines: data.explanation ? [data.explanation] : [],
+        reasoning: `Evaluated customer problem statements, UX considerations, and roadmap alignment from the ${windowLabel} conversation timeline.`,
+      })
     } catch (e) {
       console.error('[Live] explain business failed:', e)
       setModal({ type: 'clarity', title: 'Error', lines: ['Failed to generate explanation. Please try again.'] })
@@ -472,6 +569,18 @@ function Live() {
         </div>
 
         <div className="live-header-right">
+          <button
+            className={`live-header-btn live-header-btn--thoughts ${showThinkingPanel ? 'live-header-btn--active' : ''}`}
+            onClick={() => setShowThinkingPanel(!showThinkingPanel)}
+            title="Toggle AI Multi-Agent Details Panel"
+          >
+            <span className="live-brain-dot" />
+            <span>✦ AI Details</span>
+            {liveThoughts.length > 0 && (
+              <span className="live-thoughts-pill">{liveThoughts.length}</span>
+            )}
+          </button>
+
           {parsedMeetingId && (
             <>
               <button className="live-pip-btn" onClick={openPip} title="Open floating mini panel (stays on top)">
@@ -556,6 +665,13 @@ function Live() {
             <div ref={transcriptEndRef} />
           </div>
         </div>
+
+        <LiveThinkingPanel
+          thoughts={liveThoughts}
+          isOpen={showThinkingPanel}
+          onClose={() => setShowThinkingPanel(false)}
+          isListening={wsStatus === 'connected'}
+        />
       </div>
 
       <div className="live-clarity-bar">
@@ -597,6 +713,20 @@ function Live() {
 
         {parsedMeetingId && (
           <>
+          <button
+            className={`live-clarity-btn live-clarity-btn--thoughts ${showThinkingPanel ? 'live-clarity-btn--active' : ''}`}
+            onClick={() => setShowThinkingPanel(!showThinkingPanel)}
+            title="View live multi-agent AI details and deliberation stream"
+          >
+            <span className="live-brain-dot" />
+            AI Details
+            {liveThoughts.length > 0 && (
+              <span className="live-thoughts-pill" style={{ marginLeft: '4px' }}>
+                {liveThoughts.length}
+              </span>
+            )}
+          </button>
+
           <button
             className="live-clarity-btn live-clarity-btn--proposal"
             onClick={handleShowProposals}
@@ -790,11 +920,31 @@ function Live() {
                 </>
               )}
               {modal.type === 'clarity' && (
-                modal.lines.map((line, i) => (
-                  <p key={i} className={`live-modal-line ${line === '' ? 'live-modal-line--spacer' : ''}`}>
-                    {line}
-                  </p>
-                ))
+                <>
+                  <div className="live-ai-disclaimer" style={{ fontSize: '11px', color: 'var(--text-3)', padding: '6px 10px', background: 'var(--bg-3)', borderRadius: '6px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="16" x2="12" y2="12"/>
+                      <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    <span>✦ AI generated insight &middot; Verify critical information</span>
+                  </div>
+                  {modal.lines.map((line, i) => (
+                    <p key={i} className={`live-modal-line ${line === '' ? 'live-modal-line--spacer' : ''}`}>
+                      {line}
+                    </p>
+                  ))}
+                  {modal.reasoning && (
+                    <div className="live-clarity-reasoning-toggle">
+                      <div className="live-clarity-reasoning-btn">
+                        <span>✦ AI Reasoning Details</span>
+                      </div>
+                      <div className="live-clarity-reasoning-content">
+                        {modal.reasoning}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             {modal.type !== 'proposals' && (
