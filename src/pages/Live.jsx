@@ -116,6 +116,7 @@ function Live() {
     id: c.id,
     speaker: c.speaker,
     text: c.text,
+    rawTimestamp: c.timestamp,
     timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     role: '',
     is_final: c.is_final !== undefined ? c.is_final : true,
@@ -128,9 +129,9 @@ function Live() {
       onOpen: () => {
         setWsStatus('connected')
         addThought({
-          agent: 'scrum_master',
-          title: 'WebSocket Connected',
-          text: 'Real-time multi-agent meeting monitor initialized. Listening to speaker turns & context.',
+          agent: 'system',
+          title: 'Meeting Stream Connected',
+          text: 'Live transcription channel established. Multi-agent monitor listening to context.',
         })
         // Catch up on proposals that were generated before the WS connected
         getActions(parsedMeetingId).then((actions) => {
@@ -160,8 +161,8 @@ function Live() {
       onClose: () => {
         setWsStatus('disconnected')
         addThought({
-          agent: 'scrum_master',
-          title: 'WebSocket Disconnected',
+          agent: 'system',
+          title: 'Meeting Stream Disconnected',
           text: 'Live transcription connection closed.',
         })
       },
@@ -169,30 +170,57 @@ function Live() {
         setTranscript(chunks.map(mapChunk))
         if (chunks.length > 0) {
           addThought({
-            agent: 'scrum_master',
+            agent: 'system',
             title: 'Transcript Snapshot Loaded',
-            text: `Ingested ${chunks.length} past speaker turns from database session.`,
+            text: `Loaded ${chunks.length} past speaker turns from database session.`,
           })
         }
       },
       onChunk: (chunk) => {
         setTranscript((prev) => {
-          if (prev === null) return null
+          if (prev === null) return [mapChunk(chunk)]
           const mapped = mapChunk(chunk)
-          const idx = prev.findIndex((c) => c.id === mapped.id)
+          
+          // 1. Direct ID match
+          const idx = prev.findIndex((c) => c.id !== undefined && mapped.id !== undefined && String(c.id) === String(mapped.id))
           if (idx >= 0) {
             const next = [...prev]
             next[idx] = mapped
             return next
           }
+
+          // 2. Direct speaker and timestamp match
+          const tsIdx = prev.findIndex((c) => c.speaker === mapped.speaker && (c.rawTimestamp === mapped.rawTimestamp || c.timestamp === mapped.timestamp))
+          if (tsIdx >= 0) {
+            const next = [...prev]
+            next[tsIdx] = mapped
+            return next
+          }
+
+          // 3. Continuation/extension of previous chunk by same speaker (interim speech expansion)
+          if (prev.length > 0) {
+            const last = prev[prev.length - 1]
+            if (last.speaker === mapped.speaker) {
+              const lastClean = (last.text || '').trim().toLowerCase()
+              const mappedClean = (mapped.text || '').trim().toLowerCase()
+              if (mappedClean.startsWith(lastClean) || lastClean.endsWith('...') || lastClean.length < 15) {
+                if (mapped.text.length >= last.text.length) {
+                  const next = [...prev]
+                  next[next.length - 1] = mapped
+                  return next
+                }
+              }
+            }
+          }
+
           return [...prev, mapped]
         })
 
         const textPreview = chunk.text && chunk.text.length > 70 ? `${chunk.text.slice(0, 70)}…` : chunk.text
         addThought({
-          agent: 'scrum_master',
-          title: `Utterance Ingested: ${chunk.speaker || 'Speaker'}`,
-          text: `Analyzing statement: "${textPreview}" for actionable commitments or blockers.`,
+          agent: 'system',
+          title: `Utterance Received: ${chunk.speaker || 'Speaker'}`,
+          text: `Captured: "${textPreview}"`,
           metadata: { speaker: chunk.speaker, grounding: true },
         })
       },
@@ -205,7 +233,12 @@ function Live() {
         })
       },
       onProposal: (proposal) => {
-        setPendingProposals((prev) => [...prev, proposal])
+        setPendingProposals((prev) => {
+          if (prev.some(p => p.id === proposal.id || (p.content === proposal.content && p.type === proposal.type))) {
+            return prev
+          }
+          return [...prev, proposal]
+        })
         setToastProposal(proposal)
         playProposalSound(proposal.type)
         channelRef.current?.postMessage({ type: 'proposal', proposal })

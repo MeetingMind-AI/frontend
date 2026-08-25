@@ -243,6 +243,10 @@
   border-left-color: #4f8ef7;
 }
 
+.ltp-card--system {
+  border-left-color: #58a6ff;
+}
+
 .ltp-card--default {
   border-left-color: #d29922;
 }

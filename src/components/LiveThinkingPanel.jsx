@@ -121,7 +121,8 @@ export default function LiveThinkingPanel({
                     {t.agent === 'scrum_master' && 'Scrum Master'}
                     {t.agent === 'tech_lead' && 'Tech Lead'}
                     {t.agent === 'product_manager' && 'Product Manager'}
-                    {!['scrum_master', 'tech_lead', 'product_manager'].includes(t.agent) && 'Multi-Agent Engine'}
+                    {t.agent === 'system' && 'Meeting Stream'}
+                    {!['scrum_master', 'tech_lead', 'product_manager', 'system'].includes(t.agent) && 'Meeting Stream'}
                   </div>
                   <span className="ltp-time">{t.time}</span>
                 </div>
