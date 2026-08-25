@@ -308,8 +308,11 @@ export default function Settings() {
 
   return (
     <div className="settings-page">
-      <div className="settings-top">
-        <h1 className="settings-title">Team Settings</h1>
+      <div className="page-header" style={{ marginBottom: '4px' }}>
+        <div className="page-header-left">
+          <h1 className="page-title">Team Settings</h1>
+          <p className="page-sub">Manage team profile, members, topics, and prompts</p>
+        </div>
       </div>
 
       <div className="settings-body">

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getAllActions, getMembers, updateAction } from '../api'
+import { getAllActions, getMembers, updateAction, getTopics, addMeetingTopic, removeMeetingTopic } from '../api'
 import { buildArchiveItems } from '../utils'
+import MeetingTopicTags from '../components/MeetingTopicTags'
+import './GlobalKanban.css'
 import './GlobalParkingLot.css'
 
-function ArchiveCard({ item, members, onRefresh }) {
+function ArchiveCard({ item, members, teamTopics, onRefresh }) {
   const [restoring, setRestoring] = useState(false)
 
   const handleRestore = async () => {
@@ -18,36 +20,35 @@ function ArchiveCard({ item, members, onRefresh }) {
     }
   }
 
-  const toggleTag = async (tag) => {
-    const newTags = item.tags.includes(tag) ? item.tags.filter(t => t !== tag) : [...item.tags, tag]
-    try {
-      await updateAction(item.meetingId, item.id, undefined, undefined, undefined, undefined, newTags)
-      onRefresh()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
   return (
-    <div className="pl-item" style={{ opacity: 0.8 }}>
+    <div className="pl-item" style={{ opacity: 0.85 }}>
       <div className="pl-item-body">
         <p className="pl-item-text">{item.title}</p>
-        <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
-          <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-dim)' }}>
-            {item.action_type.toUpperCase()}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginTop: '8px' }}>
+          <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-dim)', fontWeight: 600 }}>
+            {item.action_type === 'parking_lot' ? 'PARKING LOT' : item.action_type === 'to_schedule' ? 'SCHEDULE' : 'TODO'}
           </span>
-          <button
-            onClick={() => toggleTag('technical')}
-            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: item.tags.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: item.tags.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
-          >
-            Tech
-          </button>
-          <button
-            onClick={() => toggleTag('business')}
-            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: item.tags.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: item.tags.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
-          >
-            Biz
-          </button>
+          <MeetingTopicTags
+            meetingTopics={item.topics || []}
+            teamTopics={teamTopics || []}
+            onAdd={async (topicId) => {
+              try {
+                await addMeetingTopic(item.meetingId, topicId)
+                onRefresh()
+              } catch (err) {
+                console.error(err)
+              }
+            }}
+            onRemove={async (topicId) => {
+              try {
+                await removeMeetingTopic(item.meetingId, topicId)
+                onRefresh()
+              } catch (err) {
+                console.error(err)
+              }
+            }}
+            dropUp
+          />
         </div>
         {item.assignee && (
           <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-dim)' }}>
@@ -62,7 +63,7 @@ function ArchiveCard({ item, members, onRefresh }) {
           <button 
             onClick={handleRestore} 
             disabled={restoring}
-            style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px' }}
+            style={{ padding: '4px 10px', fontSize: '12px', cursor: 'pointer', background: 'transparent', color: 'var(--accent)', border: '1px solid var(--border)', borderRadius: '4px', fontWeight: 600 }}
           >
             {restoring ? 'Restoring...' : 'Restore'}
           </button>
@@ -76,13 +77,16 @@ export default function GlobalArchive() {
   const { teamId } = useParams()
   const [items, setItems] = useState([])
   const [members, setMembers] = useState([])
-  const [filterTags, setFilterTags] = useState([])
+  const [teamTopics, setTeamTopics] = useState([])
+  const [topicFilter, setTopicFilter] = useState([])
 
-  const toggleFilter = (tag) => setFilterTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  
+  const toggleTopicFilter = (id) => {
+    setTopicFilter(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id])
+  }
+
   const filteredItems = items.filter(t => {
-    if (filterTags.length === 0) return true
-    return filterTags.every(ft => t.tags.includes(ft))
+    if (topicFilter.length === 0) return true
+    return topicFilter.every(id => (t.topics || []).some(top => top.id === id))
   })
 
   const loadData = () => {
@@ -95,28 +99,44 @@ export default function GlobalArchive() {
     loadData()
     if (teamId) {
       getMembers(teamId).then(setMembers).catch(() => {})
+      getTopics(teamId).then(data => setTeamTopics(data.topics ?? [])).catch(() => {})
     }
   }, [teamId])
 
   return (
-    <div className="pl-page">
-      <div className="pl-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 className="pl-page-title">Archive</h1>
-          <p className="pl-page-sub">Archived tasks and topics from all meetings</p>
-          <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
-            <button 
-              onClick={() => toggleFilter('technical')}
-              style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: filterTags.includes('technical') ? '#4f8ef7' : 'transparent', color: filterTags.includes('technical') ? '#fff' : 'var(--text-dim)' }}
-            >
-              Tech
-            </button>
-            <button 
-              onClick={() => toggleFilter('business')}
-              style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: filterTags.includes('business') ? '#3fb950' : 'transparent', color: filterTags.includes('business') ? '#fff' : 'var(--text-dim)' }}
-            >
-              Biz
-            </button>
+    <div className="page-container">
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Archive</h1>
+          <p className="page-sub">Archived tasks, parking lot items, and deferred topics</p>
+          <div className="page-header-meta">
+            <span className="page-count-badge">
+              {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''}
+            </span>
+            {teamTopics.length > 0 && (
+              <div className="gk-topic-filter-row">
+                <span className="gk-topic-filter-label">Topics:</span>
+                {teamTopics.map((t) => {
+                  const active = topicFilter.includes(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      className={`gk-topic-filter-chip ${active ? 'gk-topic-filter-chip--active' : ''}`}
+                      style={active ? { background: t.color + '22', color: t.color, borderColor: t.color + '88' } : {}}
+                      onClick={() => toggleTopicFilter(t.id)}
+                    >
+                      <span className="gk-topic-filter-dot" style={{ background: t.color }} />
+                      {t.name}
+                    </button>
+                  )
+                })}
+                {topicFilter.length > 0 && (
+                  <button className="gk-topic-filter-clear" onClick={() => setTopicFilter([])}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -130,7 +150,7 @@ export default function GlobalArchive() {
             </div>
             <div className="pl-group-items">
               {filteredItems.map((item) => (
-                <ArchiveCard key={item.id} item={item} members={members} onRefresh={loadData} />
+                <ArchiveCard key={item.id} item={item} members={members} teamTopics={teamTopics} onRefresh={loadData} />
               ))}
             </div>
           </div>

@@ -349,6 +349,11 @@
   background: var(--yellow-dim);
 }
 
+.dash-status--summarizing {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
 .dash-status-pulse {
   width: 6px;
   height: 6px;
@@ -356,6 +361,56 @@
   border-radius: 50%;
   flex-shrink: 0;
   animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+.dash-status-pulse-blue {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: statusPulse 1.2s ease-in-out infinite;
+}
+
+.dash-card-summarizing-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(79, 142, 247, 0.08);
+  border: 1px dashed rgba(79, 142, 247, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+  min-height: calc(12px * 1.6 * 2);
+}
+
+.dash-spinner-small {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  animation: dashSpin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes dashSpin {
+  to { transform: rotate(360deg); }
+}
+
+.dash-card-cta--summarizing {
+  color: var(--accent);
+  border-color: rgba(79, 142, 247, 0.4);
+  background: rgba(79, 142, 247, 0.1);
+  font-weight: 600;
+}
+
+.dash-card-cta--summarizing:hover {
+  background: rgba(79, 142, 247, 0.2);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 @keyframes statusPulse {

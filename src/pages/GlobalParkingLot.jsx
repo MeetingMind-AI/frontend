@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getAllActions, getMeetings, createAction, updateAction } from '../api'
+import { getAllActions, getMeetings, createAction, updateAction, getTopics, addMeetingTopic, removeMeetingTopic } from '../api'
 import { buildParkingLotItems } from '../utils'
+import MeetingTopicTags from '../components/MeetingTopicTags'
 import './GlobalKanban.css'
 import './GlobalParkingLot.css'
 
-function ParkingCard({ item, onRefresh }) {
+function ParkingCard({ item, teamTopics, onRefresh }) {
   const [promoting, setPromoting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(item.text)
@@ -20,17 +21,6 @@ function ParkingCard({ item, onRefresh }) {
       console.error(err)
     }
   }
-
-  const toggleTag = async (tag) => {
-    const newTags = item.tags.includes(tag) ? item.tags.filter(t => t !== tag) : [...item.tags, tag]
-    try {
-      await updateAction(item.meetingId, item.id, undefined, undefined, undefined, undefined, newTags)
-      onRefresh()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
 
   const handlePromote = async () => {
     setPromoting(true)
@@ -66,19 +56,28 @@ function ParkingCard({ item, onRefresh }) {
         ) : (
           <p className="pl-item-text" onClick={() => setIsEditing(true)} style={{ cursor: 'pointer', outline: 'none' }} title="Click to edit">{item.text}</p>
         )}
-        <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
-          <button 
-            onClick={() => toggleTag('technical')}
-            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: item.tags.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: item.tags.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
-          >
-            Tech
-          </button>
-          <button 
-            onClick={() => toggleTag('business')}
-            style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: item.tags.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: item.tags.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
-          >
-            Biz
-          </button>
+        <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+          <MeetingTopicTags
+            meetingTopics={item.topics || []}
+            teamTopics={teamTopics || []}
+            onAdd={async (topicId) => {
+              try {
+                await addMeetingTopic(item.meetingId, topicId)
+                onRefresh()
+              } catch (err) {
+                console.error(err)
+              }
+            }}
+            onRemove={async (topicId) => {
+              try {
+                await removeMeetingTopic(item.meetingId, topicId)
+                onRefresh()
+              } catch (err) {
+                console.error(err)
+              }
+            }}
+            dropUp
+          />
         </div>
         {item.assignee && (
           <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-dim)' }}>
@@ -115,17 +114,20 @@ export default function GlobalParkingLot() {
   const { teamId } = useParams()
   const [items, setItems] = useState([])
   const [meetings, setMeetings] = useState([])
+  const [teamTopics, setTeamTopics] = useState([])
+  const [topicFilter, setTopicFilter] = useState([])
 
   const [showModal, setShowModal] = useState(false)
   const [newItemText, setNewItemText] = useState('')
   const [newItemMeeting, setNewItemMeeting] = useState('')
-  const [filterTags, setFilterTags] = useState([])
 
-  const toggleFilter = (tag) => setFilterTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+  const toggleTopicFilter = (id) => {
+    setTopicFilter(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id])
+  }
 
   const filteredItems = items.filter(t => {
-    if (filterTags.length === 0) return true
-    return filterTags.every(ft => t.tags.includes(ft))
+    if (topicFilter.length === 0) return true
+    return topicFilter.every(id => (t.topics || []).some(top => top.id === id))
   })
 
   const loadData = () => {
@@ -141,6 +143,7 @@ export default function GlobalParkingLot() {
         setMeetings(meets)
         if (meets.length > 0) setNewItemMeeting(meets[0].id)
       }).catch(() => {})
+      getTopics(teamId).then(data => setTeamTopics(data.topics ?? [])).catch(() => {})
     }
   }, [teamId])
 
@@ -159,31 +162,50 @@ export default function GlobalParkingLot() {
   }
 
   return (
-    <div className="pl-page">
-      <div className="pl-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 className="pl-page-title">Parking Lot</h1>
-          <p className="pl-page-sub">Deferred topics and blockers from all meetings</p>
-          <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
-            <button 
-              onClick={() => toggleFilter('technical')}
-              style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: filterTags.includes('technical') ? '#4f8ef7' : 'transparent', color: filterTags.includes('technical') ? '#fff' : 'var(--text-dim)' }}
-            >
-              Tech
-            </button>
-            <button 
-              onClick={() => toggleFilter('business')}
-              style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: filterTags.includes('business') ? '#3fb950' : 'transparent', color: filterTags.includes('business') ? '#fff' : 'var(--text-dim)' }}
-            >
-              Biz
-            </button>
+    <div className="page-container">
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Parking Lot</h1>
+          <p className="page-sub">Deferred topics, questions, and blockers from all meetings</p>
+          <div className="page-header-meta">
+            <span className="page-count-badge">
+              {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''}
+            </span>
+            {teamTopics.length > 0 && (
+              <div className="gk-topic-filter-row">
+                <span className="gk-topic-filter-label">Topics:</span>
+                {teamTopics.map((t) => {
+                  const active = topicFilter.includes(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      className={`gk-topic-filter-chip ${active ? 'gk-topic-filter-chip--active' : ''}`}
+                      style={active ? { background: t.color + '22', color: t.color, borderColor: t.color + '88' } : {}}
+                      onClick={() => toggleTopicFilter(t.id)}
+                    >
+                      <span className="gk-topic-filter-dot" style={{ background: t.color }} />
+                      {t.name}
+                    </button>
+                  )
+                })}
+                {topicFilter.length > 0 && (
+                  <button className="gk-topic-filter-clear" onClick={() => setTopicFilter([])}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <button 
+          className="page-primary-btn"
           onClick={() => setShowModal(true)}
-          style={{ padding: '8px 16px', background: 'var(--accent)', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
         >
-          + Add Item
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Add Item
         </button>
       </div>
 
@@ -227,7 +249,7 @@ export default function GlobalParkingLot() {
             </div>
             <div className="pl-group-items">
               {filteredItems.map((item) => (
-                <ParkingCard key={item.id} item={item} onRefresh={loadData} />
+                <ParkingCard key={item.id} item={item} teamTopics={teamTopics} onRefresh={loadData} />
               ))}
             </div>
           </div>

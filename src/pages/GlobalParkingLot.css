@@ -102,7 +102,7 @@
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  position: relative;
 }
 
 .pl-group-header {
@@ -112,6 +112,7 @@
   padding: 12px 18px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-3);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .pl-group-title {
@@ -137,7 +138,12 @@
   gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-muted);
+  position: relative;
   transition: background 0.12s;
+}
+
+.pl-item:has(.mm-topic-dropdown) {
+  z-index: 50;
 }
 
 .pl-item:last-child {

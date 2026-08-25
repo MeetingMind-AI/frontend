@@ -275,10 +275,10 @@
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
   min-height: 280px;
   display: flex;
   flex-direction: column;
+  position: relative;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -294,6 +294,7 @@
   padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-3);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .gk-col-header-left {
@@ -349,7 +350,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
   transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.gk-card:has(.mm-topic-dropdown) {
+  z-index: 50;
 }
 
 .gk-card:hover {
@@ -679,3 +685,96 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Kanban Topic Filter & Chips ── */
+.gk-topic-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gk-topic-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.gk-topic-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.gk-topic-filter-chip:hover {
+  color: var(--text-1);
+  background: var(--bg-4);
+}
+
+.gk-topic-filter-chip--active {
+  font-weight: 600;
+}
+
+.gk-topic-filter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gk-topic-filter-clear {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+  margin-left: 2px;
+}
+
+.gk-topic-filter-clear:hover {
+  color: var(--text-1);
+  background: var(--bg-3);
+}
+
+.gk-card-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.gk-card-topic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+}
+
+.gk-card-topic-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+

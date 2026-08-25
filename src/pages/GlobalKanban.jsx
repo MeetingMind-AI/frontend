@@ -5,20 +5,22 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getAllActions, getMembers, getMeetings, createAction, updateAction, deleteAction } from '../api'
+import { getAllActions, getMembers, getMeetings, createAction, updateAction, deleteAction, getTopics, addMeetingTopic, removeMeetingTopic } from '../api'
 import { buildKanbanTasks } from '../utils'
+import MeetingTopicTags from '../components/MeetingTopicTags'
 import './GlobalKanban.css'
 
 /**
  * TaskCard component representing an individual Kanban task item.
- * Supports inline title editing, assignee selection, tag management, and column movement.
+ * Supports inline title editing, assignee selection, topic management, and column movement.
  *
  * @param {Object} props - Component props.
  * @param {Object} props.task - Task data object.
  * @param {Array<Object>} props.members - List of team members for assignee dropdown.
+ * @param {Array<Object>} props.teamTopics - List of all team topics.
  * @param {Function} props.onRefresh - Callback to refresh parent board state.
  */
-function TaskCard({ task, members, onRefresh }) {
+function TaskCard({ task, members, teamTopics, onRefresh }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(task.title)
 
@@ -38,15 +40,6 @@ function TaskCard({ task, members, onRefresh }) {
     }
   }
 
-  const toggleTag = async (tag) => {
-    const newTags = task.tags.includes(tag) ? task.tags.filter(t => t !== tag) : [...task.tags, tag]
-    try {
-      await updateAction(task.meetingId, task.id, undefined, undefined, undefined, undefined, newTags)
-      onRefresh()
-    } catch (err) {
-      console.error(err)
-    }
-  }
   const handleAssigneeChange = async (e) => {
     const newAssignee = e.target.value ? parseInt(e.target.value) : null
     try {
@@ -133,19 +126,28 @@ function TaskCard({ task, members, onRefresh }) {
         <p className="gk-card-title" onClick={() => setIsEditing(true)} style={{ cursor: 'pointer', outline: 'none' }} title="Click to edit">{task.title}</p>
       )}
 
-      <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
-        <button 
-          onClick={() => toggleTag('technical')}
-          style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags.includes('technical') ? 'rgba(79, 142, 247, 0.2)' : 'transparent', color: task.tags.includes('technical') ? '#4f8ef7' : 'var(--text-dim)' }}
-        >
-          Tech
-        </button>
-        <button 
-          onClick={() => toggleTag('business')}
-          style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: task.tags.includes('business') ? 'rgba(63, 185, 80, 0.2)' : 'transparent', color: task.tags.includes('business') ? '#3fb950' : 'var(--text-dim)' }}
-        >
-          Biz
-        </button>
+      <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+        <MeetingTopicTags
+          meetingTopics={task.topics || []}
+          teamTopics={teamTopics || []}
+          onAdd={async (topicId) => {
+            try {
+              await addMeetingTopic(task.meetingId, topicId)
+              onRefresh()
+            } catch (err) {
+              console.error(err)
+            }
+          }}
+          onRemove={async (topicId) => {
+            try {
+              await removeMeetingTopic(task.meetingId, topicId)
+              onRefresh()
+            } catch (err) {
+              console.error(err)
+            }
+          }}
+          dropUp
+        />
       </div>
       
       <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -196,18 +198,21 @@ export default function GlobalKanban() {
   const [tasks, setTasks] = useState([])
   const [members, setMembers] = useState([])
   const [meetings, setMeetings] = useState([])
+  const [teamTopics, setTeamTopics] = useState([])
+  const [topicFilter, setTopicFilter] = useState([])
 
   const [showModal, setShowModal] = useState(false)
   const [newItemText, setNewItemText] = useState('')
   const [newItemAssignee, setNewItemAssignee] = useState('')
   const [newItemMeeting, setNewItemMeeting] = useState('')
-  const [filterTags, setFilterTags] = useState([])
 
-  const toggleFilter = (tag) => setFilterTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  
+  const toggleTopicFilter = (id) => {
+    setTopicFilter(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id])
+  }
+
   const filteredTasks = tasks.filter(t => {
-    if (filterTags.length === 0) return true
-    return filterTags.every(ft => t.tags.includes(ft))
+    if (topicFilter.length === 0) return true
+    return topicFilter.every(id => (t.topics || []).some(top => top.id === id))
   })
 
   const loadData = () => {
@@ -224,6 +229,7 @@ export default function GlobalKanban() {
         setMeetings(meets)
         if (meets.length > 0) setNewItemMeeting(meets[0].id)
       }).catch(() => {})
+      getTopics(teamId).then(data => setTeamTopics(data.topics ?? [])).catch(() => {})
     }
   }, [teamId])
 
@@ -248,33 +254,50 @@ export default function GlobalKanban() {
   ]
 
   return (
-    <div className="gk-page">
-      <header className="gk-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 className="gk-title">Kanban</h1>
-          <div className="gk-filters" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span className="gk-task-count">{filteredTasks.length} tasks</span>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button 
-                onClick={() => toggleFilter('technical')}
-                style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: filterTags.includes('technical') ? '#4f8ef7' : 'transparent', color: filterTags.includes('technical') ? '#fff' : 'var(--text-dim)' }}
-              >
-                Tech
-              </button>
-              <button 
-                onClick={() => toggleFilter('business')}
-                style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', background: filterTags.includes('business') ? '#3fb950' : 'transparent', color: filterTags.includes('business') ? '#fff' : 'var(--text-dim)' }}
-              >
-                Biz
-              </button>
-            </div>
+    <div className="page-container">
+      <header className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Action Items</h1>
+          <p className="page-sub">Team tasks organized across workflow stages</p>
+          <div className="page-header-meta">
+            <span className="page-count-badge">
+              {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
+            </span>
+            {teamTopics.length > 0 && (
+              <div className="gk-topic-filter-row">
+                <span className="gk-topic-filter-label">Topics:</span>
+                {teamTopics.map((t) => {
+                  const active = topicFilter.includes(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      className={`gk-topic-filter-chip ${active ? 'gk-topic-filter-chip--active' : ''}`}
+                      style={active ? { background: t.color + '22', color: t.color, borderColor: t.color + '88' } : {}}
+                      onClick={() => toggleTopicFilter(t.id)}
+                    >
+                      <span className="gk-topic-filter-dot" style={{ background: t.color }} />
+                      {t.name}
+                    </button>
+                  )
+                })}
+                {topicFilter.length > 0 && (
+                  <button className="gk-topic-filter-clear" onClick={() => setTopicFilter([])}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <button 
+          className="page-primary-btn"
           onClick={() => setShowModal(true)}
-          style={{ padding: '8px 16px', background: 'var(--accent)', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
         >
-          + Add Task
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Add Task
         </button>
       </header>
 
@@ -335,7 +358,7 @@ export default function GlobalKanban() {
                   <div className="gk-col-empty">No tasks</div>
                 )}
                 {colTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} members={members} onRefresh={loadData} />
+                  <TaskCard key={task.id} task={task} members={members} teamTopics={teamTopics} onRefresh={loadData} />
                 ))}
               </div>
             </div>
