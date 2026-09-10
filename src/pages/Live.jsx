@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction, getMeeting, deleteMeeting, getMembers } from '../api'
-import { isNotificationTypeActive } from '../utils'
+import { isNotificationTypeActive, getBrowserPipSupport } from '../utils'
 import { useAuth } from '../contexts/AuthContext'
 import MiniPipContent from './MiniPipContent'
 import LiveThinkingPanel from '../components/LiveThinkingPanel'
@@ -16,7 +16,16 @@ import './Live.css'
 /** Label lookup for proposal types. */
 const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE', blocker: 'BLOCKER' }
 
-/** Set of meeting bot status strings considered active/in-progress. */
+/**
+ * Bot Lifecycle Status State Machine:
+ * The automated meeting assistant transitions through several operational phases:
+ *   1. Initial Setup: 'pending' (DB initialization) -> 'requested' (dispatch request accepted) -> 'starting'
+ *   2. Transport & Join: 'dispatched' -> 'joining' (browser launched, navigating to Google Meet / Teams)
+ *   3. Lobby & Admission: 'waiting' / 'waiting_admission' / 'awaiting_admission' (waiting for meeting host admission)
+ *      - If blocked without admission: transitions to 'needs_help' / 'needs_human_help'
+ *   4. Active Session: 'active' / 'in_meeting' / 'connected' (audio stream ingested, transcribing, AI reasoning active)
+ *   5. Termination: 'stopping' -> 'completed' (triggers navigation to /review) or 'failed'
+ */
 const ACTIVE_BOT_STATUSES = new Set([
   'pending',
   'requested',
@@ -34,6 +43,7 @@ const ACTIVE_BOT_STATUSES = new Set([
   'stopping',
 ])
 
+/** Terminal connected statuses indicating bot is admitted and actively transcribing audio. */
 const READY_STATUSES = new Set(['active', 'in_meeting', 'connected'])
 
 const LOADING_STATUS_LABELS = {
@@ -52,6 +62,14 @@ const LOADING_STATUS_LABELS = {
   connected:         'Bot connected',
 }
 
+/**
+ * Synthesizes an audible notification chime for incoming AI proposals using the Web Audio API.
+ * Uses an oscillator tone (660Hz A#5 / E5 harmonic) with an exponential decay gain envelope.
+ * Avoids external audio asset dependencies, eliminates network latency, and handles browser
+ * autoplay policy restrictions gracefully via try/catch.
+ *
+ * @param {string} type - Proposal type identifier (e.g. 'to_do', 'parking_lot', 'blocker').
+ */
 function playProposalSound(type) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
@@ -59,14 +77,22 @@ function playProposalSound(type) {
     const gain = ctx.createGain()
     osc.connect(gain)
     gain.connect(ctx.destination)
+
+    // 660Hz pure sine wave delivers a gentle, recognizable notification alert
     osc.frequency.value = 660
     osc.type = 'sine'
+
+    // Instant attack at 20% volume followed by smooth exponential decay over 600ms
     gain.gain.setValueAtTime(0.2, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
+
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + 0.6)
-  } catch (_) {}
+  } catch (_) {
+    // Silently ignore if AudioContext is blocked by browser autoplay policies
+  }
 }
+
 
 function Live() {
   const navigate = useNavigate()
@@ -406,9 +432,14 @@ function Live() {
     }).catch(() => {})
   }, [parsedMeetingId, teamId, navigate, user?.id])
 
+  // Polling loop for meeting and bot status updates:
+  // Tracks bot lifecycle progression (pending -> requested -> joining -> waiting_admission -> active).
+  // Once the meeting marks 'completed' or 'is_summarizing', automatically transitions the user
+  // from the live monitor to the post-meeting review page.
   useEffect(() => {
     if (!parsedMeetingId) return
     const t = setInterval(() => {
+      // Cease polling once a terminal status is reached
       if (['completed', 'failed'].includes(botStatusRef.current)) return
       getMeeting(parsedMeetingId)
         .then((data) => {
@@ -428,6 +459,8 @@ function Live() {
     return () => clearInterval(t)
   }, [parsedMeetingId, teamId, navigate])
 
+  // Bot active guard: records if the bot has ever reached an active state during this session.
+  // Immediately forwards to review if the meeting status switches to completed.
   useEffect(() => {
     if (!botStatus || !parsedMeetingId) return
     if (ACTIVE_BOT_STATUSES.has(botStatus)) {
@@ -439,6 +472,10 @@ function Live() {
     }
   }, [botStatus, parsedMeetingId, teamId, navigate])
 
+  // Bot status transition history and loading overlay dismissal:
+  // Records status changes sequentially for the loading timeline widget. When the bot
+  // successfully connects ('active', 'in_meeting', 'connected') or completes, initiates
+  // the fade-out animation sequence for the loading modal (700ms fade transition).
   useEffect(() => {
     if (!botStatus || !parsedMeetingId) return
     setStatusHistory((prev) => {
@@ -499,18 +536,24 @@ function Live() {
     setToastProposal(null)
   }
 
-  // 1. Keep a stable reference to our action handlers so the event listener always uses the latest version
+  // 1. Maintain a stable reference to proposal action handlers:
+  // Ensures the BroadcastChannel onmessage listener always invokes the freshest action handlers
+  // without needing to re-bind channel listeners on every state mutation.
   useEffect(() => {
     actionHandlersRef.current = { accept: handleAcceptProposal, reject: handleRejectProposal, park: handleParkProposal }
   }, [handleAcceptProposal, handleRejectProposal, handleParkProposal])
 
-  // 2. Establish the two-way sync channel
+  // 2. BroadcastChannel Inter-Window Synchronization:
+  // Establishes a dedicated same-origin broadcast channel ('meeting-{id}') bridging the main
+  // application tab with the detached Document PiP window (or fallback popup).
+  // Processes user decisions made inside the mini-window ('accepted', 'park', 'rejected') and
+  // routes them back to the main window's API mutation handlers.
   useEffect(() => {
     if (!parsedMeetingId) return
     const ch = new BroadcastChannel(`meeting-${parsedMeetingId}`)
     channelRef.current = ch
 
-    // Listen for commands coming from the PiP window
+    // Listen for commands dispatched from the PiP mini-window
     ch.onmessage = (e) => {
       if (e.data.type === 'action_proposal') {
         if (e.data.action === 'accepted') actionHandlersRef.current.accept?.(e.data.proposal)
@@ -521,7 +564,7 @@ function Live() {
     return () => { ch.close(); channelRef.current = null }
   }, [parsedMeetingId])
 
-  // 3. Broadcast timer updates to PiP window
+  // 3. Broadcast elapsed meeting timer updates to keep PiP timer display synchronized
   useEffect(() => {
     channelRef.current?.postMessage({
       type: 'sync_timer',
@@ -530,7 +573,7 @@ function Live() {
     })
   }, [elapsed, meetingType])
 
-  // 3. Push state updates TO the PiP window whenever pendingProposals changes on the main page
+  // 4. Push real-time proposal updates to the PiP window whenever pendingProposals changes on the main page
   useEffect(() => {
     channelRef.current?.postMessage({ type: 'sync_proposals', pending: pendingProposals })
   }, [pendingProposals])
@@ -608,9 +651,24 @@ function Live() {
     }
   }
 
-  // Keep a ref so openPip can read the latest proposals without stale closure
-  useEffect(() => { pendingProposalsRef.current = pendingProposals }, [pendingProposals])
-
+  /**
+   * Opens the meeting companion in an always-on-top Document Picture-in-Picture window.
+   *
+   * Architecture & Integration:
+   * 1. Browser Capability Check: Uses the W3C Document Picture-in-Picture API
+   *    (`documentPictureInPicture.requestWindow()`). Requires secure origin (HTTPS/localhost).
+   * 2. Fallback: If unsupported, falls back to a standard browser popup window (`window.open`),
+   *    storing initial proposals in localStorage for cross-window hydration.
+   * 3. Style Inheritance: PiP windows initialize with empty document heads. Stylesheets from
+   *    the opener document are cloned into the PiP head (extracting cssRules or linking cross-origin
+   *    stylesheets) so CSS variables, fonts, and utilities render identically.
+   * 4. React Subtree Mounting: Creates a new React root inside the PiP DOM (`createRoot(container)`),
+   *    passing state and action callbacks.
+   * 5. Opener Re-focus: Clicking "Return to Meeting" closes the PiP window and restores focus to the main window.
+   * 6. Lifecycle Cleanup: Listens for PiP `pagehide` to cleanly unmount the React root and clear references.
+   *
+   * @param {boolean} [fromBlur=false] - Flag indicating if triggered by window blur heuristic.
+   */
   const openPip = useCallback(async (fromBlur = false) => {
     if (!parsedMeetingId) return
     if (!fromBlur) setPipError(null)
@@ -623,9 +681,12 @@ function Live() {
 
     const allPendingProposals = pendingProposalsRef.current
 
-    // Document PiP requires secure context (https or localhost)
+    // Fallback: regular popup via window.open() if Document PiP is unsupported
     if (!('documentPictureInPicture' in window)) {
-      // Fallback: regular popup via window.open()
+      const pipSupport = getBrowserPipSupport()
+      if (!fromBlur && pipSupport.message) {
+        setPipError(pipSupport.message)
+      }
       localStorage.setItem(`mini-popup-${parsedMeetingId}`, JSON.stringify({ proposals: allPendingProposals }))
       const popup = window.open(
         `/popup?meetingId=${parsedMeetingId}&teamId=${teamId}`,
@@ -635,20 +696,27 @@ function Live() {
       if (popup) {
         pipWindowRef.current = popup
       } else {
-        setPipError('Popup blocked — allow popups for this site')
+        if (!fromBlur) {
+          setPipError(
+            pipSupport.message
+              ? `${pipSupport.message} (Fallback popup was also blocked — please allow popups for this site)`
+              : 'Popup blocked — allow popups for this site'
+          )
+        }
       }
       return
     }
 
     try {
-      // Open the always-on-top PiP window
+      // Request always-on-top PiP window with specified initial dimensions
       const pipWindow = await documentPictureInPicture.requestWindow({
         width: 380,
         height: 560,
       })
       pipWindowRef.current = pipWindow
 
-      // Copy stylesheets from the opener document (Google Developers approach)
+      // Style Sheet Cloning: PiP documents start completely blank without opener styles.
+      // We iterate document.styleSheets and clone rules into the child document.
       ;[...document.styleSheets].forEach((styleSheet) => {
         try {
           const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('')
@@ -656,7 +724,7 @@ function Live() {
           style.textContent = cssRules
           pipWindow.document.head.appendChild(style)
         } catch {
-          // Cross-origin sheet: link it by href instead
+          // Fallback for CORS-restricted external stylesheets: recreate as <link rel="stylesheet">
           const link = document.createElement('link')
           link.rel = 'stylesheet'
           link.type = styleSheet.type
@@ -666,7 +734,7 @@ function Live() {
         }
       })
 
-      // PiP-specific baseline styles
+      // Inject baseline theme styles for picture-in-picture display mode
       const baseStyle = document.createElement('style')
       baseStyle.textContent = `
         @media all and (display-mode: picture-in-picture) {
@@ -675,11 +743,10 @@ function Live() {
       `
       pipWindow.document.head.appendChild(baseStyle)
 
-      // Render React content into the PiP document
+      // Mount isolated React root inside the child window document
       const container = pipWindow.document.createElement('div')
       pipWindow.document.body.appendChild(container)
 
-      // Capture main window reference before entering PiP context
       const mainWindow = window
       const root = createRoot(container)
       pipRootRef.current = root
@@ -693,12 +760,12 @@ function Live() {
           initialElapsed={elapsed}
           onGoBack={() => {
             pipWindow.close()
-            mainWindow.focus()  // focus opener per Google Developers reference
+            mainWindow.focus() // Return focus to opener tab per W3C specification
           }}
         />,
       )
 
-      // Cleanup when PiP window is closed (per Google Developers reference)
+      // Clean unmount on window closure to prevent memory leaks and dangling DOM nodes
       pipWindow.addEventListener('pagehide', () => {
         root.unmount()
         pipWindowRef.current = null
@@ -706,17 +773,22 @@ function Live() {
       })
     } catch (e) {
       if (e.name === 'NotAllowedError') {
-        // Expected when called without a direct user gesture (e.g. blur event)
+        // Expected when invoked without direct user interaction (e.g. via window blur heuristic)
         return
       }
-      if (!fromBlur) setPipError(e.message || 'Failed to open PiP')
+      if (!fromBlur) {
+        const pipSupport = getBrowserPipSupport()
+        setPipError(pipSupport.message || e.message || 'Failed to open PiP')
+      }
       console.error('[Live] documentPictureInPicture.requestWindow() failed:', e)
     }
   }, [parsedMeetingId, teamId, meetingType, meetingCreatedAt, elapsed])
 
-  // Try to open PiP automatically when user switches to another window/app.
-  // The blur event is not a formal user gesture, so requestWindow() may throw
-  // NotAllowedError — openPip() catches it silently. Works in Chrome 148+.
+  // Window Blur Auto-Opening Heuristic:
+  // When a user navigates away from the meeting tab to their video call (e.g. Google Meet),
+  // window 'blur' automatically triggers openPip(true) to pop open the companion overlay.
+  // Note: Standard browser security prevents non-transient window creation without a user gesture.
+  // When unsupported or blocked, NotAllowedError is swallowed gracefully. Supported in modern Chromium.
   useEffect(() => {
     if (!parsedMeetingId) return
     const handleBlur = () => openPip(true)
@@ -881,20 +953,21 @@ function Live() {
           </button>
 
           {parsedMeetingId && (
-            <>
-              <button className="live-pip-btn" onClick={openPip} title="Open floating mini panel (stays on top)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="2" y="3" width="20" height="18" rx="2" />
-                  <rect x="13" y="12" width="8" height="7" rx="1" fill="currentColor" stroke="none" />
-                </svg>
-                Pop out
-              </button>
-              {pipError && (
-                <span style={{ fontSize: '11px', color: 'var(--red)', maxWidth: '120px' }}>
-                  {pipError}
-                </span>
-              )}
-            </>
+            <button
+              className="live-pip-btn"
+              onClick={openPip}
+              title={
+                typeof window !== 'undefined' && !('documentPictureInPicture' in window)
+                  ? 'Document PiP is not supported in Safari/this browser (switch to Chrome or Edge for always-on-top window)'
+                  : 'Open floating mini panel (stays on top)'
+              }
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="3" width="20" height="18" rx="2" />
+                <rect x="13" y="12" width="8" height="7" rx="1" fill="currentColor" stroke="none" />
+              </svg>
+              Pop out
+            </button>
           )}
           <button className="live-end-btn" onClick={() => navigate('/')}>
             Home
@@ -909,6 +982,27 @@ function Live() {
           </button>
         </div>
       </header>
+
+      {pipError && (
+        <div className="live-browser-warning-banner" role="alert">
+          <div className="live-browser-warning-content">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="live-browser-warning-icon">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{pipError}</span>
+          </div>
+          <button
+            className="live-browser-warning-close"
+            onClick={() => setPipError(null)}
+            title="Dismiss notification"
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="live-body">
         <div className="live-transcript">

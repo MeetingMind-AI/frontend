@@ -101,6 +101,27 @@ function formatBytes(bytes) {
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
+/**
+ * SystemStatusTracker Component:
+ * Provides real-time infrastructure observability and hardware diagnostics.
+ *
+ * Metrics & Diagnostics Monitored:
+ * 1. AI Inference Engine:
+ *    - Runtime Mode: Host Native (Metal on macOS / CUDA on Linux/Windows) vs Docker GPU vs Docker CPU mode.
+ *    - VRAM / RAM Detection: Scans running models for memory footprint and whether model layers
+ *      are offloaded to GPU VRAM (size_vram > 0) vs host system RAM.
+ *    - Model Availability: Verifies the configured LLM (e.g. hermes3:8b) is pulled and loaded.
+ * 2. Ping Latency Measurements:
+ *    - Captures round-trip ping time (in milliseconds) across all platform dependencies:
+ *      Ollama LLM, PostgreSQL 15, Redis 7, Qdrant Vector DB, and Whisper Speech-to-Text.
+ * 3. Polling & Visibility Throttling:
+ *    - Periodically polls GET /api/system/status every 30 seconds.
+ *    - Pauses network requests when document.visibilityState is 'hidden' to avoid background battery/network drain.
+ * 4. Health Status Dot Tone Mapping:
+ *    - Green ('status-dot--gpu'): Online with native host or GPU acceleration enabled.
+ *    - Amber ('status-dot--cpu'): Online in CPU-only fallback mode (slower token generation).
+ *    - Red ('status-dot--offline'): Service unreachable or error state.
+ */
 export default function SystemStatusTracker() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -108,6 +129,7 @@ export default function SystemStatusTracker() {
   const [isOpen, setIsOpen] = useState(false)
   const modalRef = useRef(null)
 
+  // Dispatches status fetch with error fallback keeping previous data intact
   const fetchStatus = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true)
     try {
@@ -121,6 +143,7 @@ export default function SystemStatusTracker() {
     }
   }, [])
 
+  // Polls every 30s only when the tab is currently active and visible to the user
   useEffect(() => {
     fetchStatus()
     const interval = setInterval(() => {
@@ -146,7 +169,7 @@ export default function SystemStatusTracker() {
   const isHost = ollama?.is_host === true || ollama?.instance_type === 'host' || ollama?.instance_type === 'mac_host'
   const isGpu = ollama?.is_gpu_accelerated === true
 
-  // Status dot tone and label
+  // Status dot tone and label mapping based on online state and acceleration mode
   let dotClass = 'status-dot--offline'
   let statusText = 'AI: Offline'
 
@@ -255,6 +278,12 @@ export default function SystemStatusTracker() {
                     </span>
                   </div>
 
+                  {/* 
+                    Loaded Models Breakdown:
+                    Inspects models currently loaded into memory via Ollama's /api/ps.
+                    Identifies memory footprint and checks if weights are mapped into GPU VRAM
+                    (size_vram > 0) versus CPU system RAM.
+                  */}
                   {ollama?.running_models && ollama.running_models.length > 0 && (
                     <div className="status-loaded-models">
                       <span className="status-sublabel">Models in Memory:</span>
@@ -289,7 +318,14 @@ export default function SystemStatusTracker() {
                 </div>
               </section>
 
-              {/* Core Services Grid */}
+              {/* 
+                Core Infrastructure Diagnostics:
+                Renders ping round-trip latency (ms) and operational health for each critical backing service:
+                - PostgreSQL 15: Primary relational data store for meetings, transcripts, and team entities.
+                - Redis 7: Real-time Pub/Sub broker for live audio chunk distribution and session cache.
+                - Qdrant Vector DB: Semantic embeddings store for context retrieval and rag search.
+                - Whisper STT: Speech-to-text inference engine generating real-time speaker transcripts.
+              */}
               <section className="status-section">
                 <span className="status-section-label">Core Infrastructure</span>
                 <div className="status-services-grid">

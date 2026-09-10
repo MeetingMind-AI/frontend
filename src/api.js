@@ -1,8 +1,19 @@
 /**
  * @file api.js
- * @description HTTP client SDK and WebSocket client for interacting with the MeetingMind-AI backend REST API.
+ * @description Central HTTP and WebSocket client for the MeetingMind-AI backend.
+ *
+ * All API calls in the frontend go through this file.  In Docker Compose,
+ * Nginx proxies every request whose path starts with /api/ to the FastAPI backend
+ * container on port 8000.  Using relative paths (no hardcoded host or port) means
+ * the same build works both in Docker and in Vite's dev-server proxy without any
+ * environment-specific changes to fetch() calls.
+ *
+ * BASE is empty string by default so all URLs are relative to the current origin.
+ * Set VITE_API_URL in .env.local to point at a remote backend during development.
  */
 
+// Relative base URL: empty string means all paths resolve against window.location.
+// This avoids CORS issues and works transparently behind the Nginx reverse proxy.
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
 /**
@@ -363,6 +374,29 @@ async function apiFetch(path, options = {}) {
     })
   }
 
+  /**
+   * Opens a WebSocket connection to the live meeting ingest endpoint.
+   *
+   * Connects to /api/ws/ingest/:meetingId, which the backend multiplexes via
+   * ConnectionManager.  The server pushes JSON frames with an `event` field:
+   *   - 'transcript_snapshot' — full ordered list of existing chunks on connect
+   *   - 'transcript_chunk'    — a single new or updated utterance
+   *   - 'insight'             — an AI real-time summary from a persona (role + text)
+   *   - 'proposal'            — a new AI-detected action item awaiting user approval
+   *   - 'agent_thought'       — a live deliberation step streamed during finalization
+   *   - 'summary_thought'     — same structure as agent_thought, different source
+   *
+   * @param {number|string} meetingId - Meeting primary key ID.
+   * @param {Object} [callbacks={}] - Optional event callbacks.
+   * @param {Function} [callbacks.onChunk]          - Called with a single new transcript chunk object.
+   * @param {Function} [callbacks.onChunksSnapshot] - Called with the full chunk array on initial connect.
+   * @param {Function} [callbacks.onInsight]        - Called with {role, text} when an AI insight arrives.
+   * @param {Function} [callbacks.onProposal]       - Called with a proposal object (type, content, id).
+   * @param {Function} [callbacks.onAgentThought]   - Called with a thought object during finalization.
+   * @param {Function} [callbacks.onOpen]           - Called when the WebSocket connection opens.
+   * @param {Function} [callbacks.onClose]          - Called when the connection closes or is evicted.
+   * @returns {{ close: Function }} Handle with a close() method to teardown the connection.
+   */
   export function openInsightSocket(meetingId, { onChunk, onChunksSnapshot, onInsight, onProposal, onAgentThought, onOpen, onClose } = {}) {
     const ws = new WebSocket(`${wsBase()}/api/ws/ingest/${meetingId}`)
 
