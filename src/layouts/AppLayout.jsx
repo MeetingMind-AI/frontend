@@ -8,7 +8,8 @@ import { NavLink, Link, Outlet, useParams, useNavigate } from 'react-router-dom'
 import { getMeetings, getTeam, getTeams } from '../api'
 import { useAuth } from '../contexts/AuthContext'
 import { meetingToCard } from '../utils'
-import UserSetupModal from '../components/UserSetupModal'
+import QuickstartModal from '../components/QuickstartModal'
+import ProfileModal from '../components/ProfileModal'
 import TeamSetupModal from '../components/TeamSetupModal'
 import SystemStatusTracker from '../components/SystemStatusTracker'
 import './AppLayout.css'
@@ -49,27 +50,29 @@ export default function AppLayout() {
   const [teamNotFound, setTeamNotFound] = useState(false)
   const [allTeams, setAllTeams] = useState([])
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showUserSetup, setShowUserSetup] = useState(false)
+  const [showQuickstart, setShowQuickstart] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
   const [showTeamSetup, setShowTeamSetup] = useState(false)
   const userMenuRef = useRef(null)
 
   useEffect(() => {
     if (user?.id) {
-      const userDone = localStorage.getItem(`mm_user_setup_completed_${user.id}`)
-      if (!userDone) {
-        setShowUserSetup(true)
+      const quickstartDismissed = localStorage.getItem(`mm_quickstart_dismissed_${user.id}`)
+      const legacyDone = localStorage.getItem(`mm_user_setup_completed_${user.id}`)
+      if (!quickstartDismissed && !legacyDone) {
+        setShowQuickstart(true)
       }
     }
   }, [user?.id])
 
   useEffect(() => {
-    if (teamId && user?.id && team && !showUserSetup) {
+    if (teamId && user?.id && team && !showQuickstart) {
       const teamDone = localStorage.getItem(`mm_team_setup_completed_${user.id}_${teamId}`)
       if (!teamDone) {
         setShowTeamSetup(true)
       }
     }
-  }, [teamId, user?.id, team, showUserSetup])
+  }, [teamId, user?.id, team, showQuickstart])
 
 
   useEffect(() => {
@@ -208,6 +211,20 @@ export default function AppLayout() {
             </svg>
             Archive
           </NavLink>
+
+          <button
+            type="button"
+            className="sidebar-link sidebar-link--btn"
+            onClick={() => setShowQuickstart(true)}
+            title="Open Quickstart Tutorial"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            Quickstart Guide
+          </button>
         </nav>
 
         <div className="sidebar-recent">
@@ -280,13 +297,24 @@ export default function AppLayout() {
               <div className="sidebar-user-menu-divider" />
               <button
                 className="sidebar-user-menu-item"
-                onClick={() => { setShowUserSetup(true); setShowUserMenu(false) }}
+                onClick={() => { setShowQuickstart(true); setShowUserMenu(false) }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                Quickstart Tutorial
+              </button>
+              <button
+                className="sidebar-user-menu-item"
+                onClick={() => { setShowProfileModal(true); setShowUserMenu(false) }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
-                Edit Profile & Setup
+                Edit Profile
               </button>
               <div className="sidebar-user-menu-divider" />
               <button className="sidebar-user-menu-item" onClick={handleLogout}>
@@ -306,10 +334,13 @@ export default function AppLayout() {
         <Outlet />
       </main>
 
-      {showUserSetup && (
-        <UserSetupModal onClose={() => setShowUserSetup(false)} />
+      {showQuickstart && (
+        <QuickstartModal onClose={() => setShowQuickstart(false)} />
       )}
-      {showTeamSetup && !showUserSetup && teamId && (
+      {showProfileModal && (
+        <ProfileModal onClose={() => setShowProfileModal(false)} />
+      )}
+      {showTeamSetup && !showQuickstart && teamId && (
         <TeamSetupModal
           teamId={teamId}
           teamData={team}

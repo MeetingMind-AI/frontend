@@ -1,0 +1,458 @@
+/**
+ * @file QuickstartModal.css
+ * @description Styling for interactive quickstart tutorial and onboarding modal.
+ */
+
+.qsm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: qsmFadeIn 0.2s ease-out;
+}
+
+@keyframes qsmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.qsm-modal {
+  background: var(--bg-2, #161b22);
+  border: 1px solid var(--border, #30363d);
+  border-radius: var(--radius-lg, 12px);
+  width: 100%;
+  max-width: 620px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: qsmSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes qsmSlideUp {
+  from { transform: translateY(16px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.qsm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border, #30363d);
+  background: var(--bg-1, #0d1117);
+}
+
+.qsm-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qsm-brand {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1, #f0f6fc);
+  display: block;
+}
+
+.qsm-sub {
+  font-size: 11px;
+  color: var(--text-3, #6e7681);
+  display: block;
+}
+
+.qsm-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-3, #6e7681);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.qsm-close-btn:hover {
+  color: var(--text-1, #f0f6fc);
+  background: var(--bg-3, #21262d);
+}
+
+/* Step Tabs */
+.qsm-steps {
+  display: flex;
+  border-bottom: 1px solid var(--border, #30363d);
+  background: var(--bg-1, #0d1117);
+}
+
+.qsm-step-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3, #6e7681);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qsm-step-tab:hover {
+  color: var(--text-2, #8b949e);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.qsm-step-tab--active {
+  color: var(--accent, #4f8ef7);
+  border-bottom-color: var(--accent, #4f8ef7);
+  background: rgba(79, 142, 247, 0.04);
+}
+
+.qsm-step-tab--done {
+  color: var(--text-2, #8b949e);
+}
+
+.qsm-step-number {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-3, #21262d);
+  border: 1px solid var(--border, #30363d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.qsm-step-tab--active .qsm-step-number {
+  background: var(--accent, #4f8ef7);
+  border-color: var(--accent, #4f8ef7);
+  color: #fff;
+}
+
+.qsm-step-tab--done .qsm-step-number {
+  background: rgba(63, 185, 80, 0.2);
+  border-color: #3fb950;
+  color: #3fb950;
+}
+
+/* Modal Body & Slides */
+.qsm-body {
+  padding: 24px;
+  min-height: 330px;
+  display: flex;
+  flex-direction: column;
+}
+
+.qsm-slide {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: qsmFadeIn 0.2s ease-out;
+}
+
+.qsm-slide-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qsm-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent, #4f8ef7);
+}
+
+.qsm-slide-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1, #f0f6fc);
+  margin: 0;
+}
+
+.qsm-slide-desc {
+  font-size: 13px;
+  color: var(--text-2, #8b949e);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Slide 1: Personas Grid */
+.qsm-personas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.qsm-persona-card {
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.qsm-persona-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--text-3, #6e7681);
+}
+
+.qsm-persona-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qsm-persona--tech .qsm-persona-badge {
+  color: #4f8ef7;
+}
+
+.qsm-persona--pm .qsm-persona-badge {
+  color: #a855f7;
+}
+
+.qsm-persona--sm .qsm-persona-badge {
+  color: #3fb950;
+}
+
+.qsm-persona-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1, #f0f6fc);
+  margin: 0;
+}
+
+.qsm-persona-text {
+  font-size: 11px;
+  color: var(--text-3, #6e7681);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Slide 2: Flow steps */
+.qsm-flow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qsm-flow-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.qsm-flow-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(79, 142, 247, 0.15);
+  color: var(--accent, #4f8ef7);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.qsm-flow-content h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1, #f0f6fc);
+  margin: 0 0 4px 0;
+}
+
+.qsm-flow-content p {
+  font-size: 12px;
+  color: var(--text-2, #8b949e);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.qsm-modes-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.qsm-mode-pill {
+  font-size: 11px;
+  color: var(--text-2, #8b949e);
+  background: var(--bg-2, #161b22);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.qsm-mode-pill strong {
+  color: var(--text-1, #f0f6fc);
+}
+
+/* Slide 3: Live Superpowers */
+.qsm-features-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.qsm-feature-box {
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qsm-feature-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--bg-2, #161b22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border, #30363d);
+}
+
+.qsm-feature-box h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1, #f0f6fc);
+  margin: 0;
+}
+
+.qsm-feature-box p {
+  font-size: 12px;
+  color: var(--text-2, #8b949e);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Slide 4: Review & Kanban */
+.qsm-summary-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qsm-summary-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--bg-1, #0d1117);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.qsm-item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.qsm-summary-item h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1, #f0f6fc);
+  margin: 0 0 4px 0;
+}
+
+.qsm-summary-item p {
+  font-size: 12px;
+  color: var(--text-2, #8b949e);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Footer */
+.qsm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border, #30363d);
+  background: var(--bg-1, #0d1117);
+  gap: 16px;
+}
+
+.qsm-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-3, #6e7681);
+  cursor: pointer;
+  user-select: none;
+}
+
+.qsm-checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent, #4f8ef7);
+  cursor: pointer;
+}
+
+.qsm-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qsm-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  white-space: nowrap;
+}
+
+.qsm-btn--ghost {
+  background: transparent;
+  color: var(--text-2, #8b949e);
+}
+
+.qsm-btn--ghost:hover {
+  color: var(--text-1, #f0f6fc);
+  background: var(--bg-3, #21262d);
+}
+
+.qsm-btn--primary {
+  background: var(--accent, #4f8ef7);
+  color: #fff;
+}
+
+.qsm-btn--primary:hover {
+  opacity: 0.9;
+}

@@ -118,6 +118,15 @@
   color: var(--text-1);
 }
 
+.sidebar-link--btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
 .sidebar-link--active {
   background: var(--accent-dim);
   color: var(--accent);

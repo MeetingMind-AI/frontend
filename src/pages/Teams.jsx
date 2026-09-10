@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getTeams, createTeam } from '../api'
 import { useAuth } from '../contexts/AuthContext'
-import UserSetupModal from '../components/UserSetupModal'
+import QuickstartModal from '../components/QuickstartModal'
 import './Teams.css'
 
 export default function Teams() {
@@ -15,13 +15,14 @@ export default function Teams() {
   const [newName, setNewName] = useState('')
   const [createError, setCreateError] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
-  const [showUserSetup, setShowUserSetup] = useState(false)
+  const [showQuickstart, setShowQuickstart] = useState(false)
 
   useEffect(() => {
     if (user?.id) {
-      const userDone = localStorage.getItem(`mm_user_setup_completed_${user.id}`)
-      if (!userDone) {
-        setShowUserSetup(true)
+      const quickstartDismissed = localStorage.getItem(`mm_quickstart_dismissed_${user.id}`)
+      const legacyDone = localStorage.getItem(`mm_user_setup_completed_${user.id}`)
+      if (!quickstartDismissed && !legacyDone) {
+        setShowQuickstart(true)
       }
     }
   }, [user?.id])
@@ -64,6 +65,19 @@ export default function Teams() {
           MeetingMind
         </div>
         <div className="teams-header-right">
+          <button
+            type="button"
+            className="teams-guide-btn"
+            onClick={() => setShowQuickstart(true)}
+            title="Open Quickstart Tutorial"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            Quickstart Guide
+          </button>
           <span className="teams-user-name">{user?.name}</span>
           <button className="teams-logout-btn" onClick={handleLogout}>Logout</button>
         </div>
@@ -136,7 +150,7 @@ export default function Teams() {
           </div>
         )}
       </div>
-      {showUserSetup && <UserSetupModal onClose={() => setShowUserSetup(false)} />}
+      {showQuickstart && <QuickstartModal onClose={() => setShowQuickstart(false)} />}
     </div>
   )
 }

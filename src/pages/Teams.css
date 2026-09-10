@@ -35,6 +35,25 @@
   color: var(--text-2);
 }
 
+.teams-guide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-size: 13px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.teams-guide-btn:hover {
+  background: var(--border);
+  color: var(--accent);
+}
+
 .teams-logout-btn {
   background: none;
   border: 1px solid var(--border);
