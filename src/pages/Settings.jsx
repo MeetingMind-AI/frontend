@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   getTeam, updateTeam, getMembers, kickMember, updateTeamMember,
   getTopics, createTopic, updateTopic, deleteTopic,
-  getInviteLink, leaveTeam,
+  getInviteLink, leaveTeam, transferTeamOwnership, deleteTeam,
   getTeamPrompts, updateTeamPrompt, resetTeamPrompt,
 } from '../api'
 import { isNotificationTypeActive } from '../utils'
@@ -112,7 +112,7 @@ const TABS = [
   { key: 'topics', label: 'Topics' },
   { key: 'prompts', label: 'AI Prompts', ownerOnly: true },
   { key: 'invite', label: 'Invite Link' },
-  { key: 'leave', label: 'Leave Team' },
+  { key: 'leave', label: 'Danger Zone' },
 ]
 
 export default function Settings() {
@@ -130,6 +130,14 @@ export default function Settings() {
 
   const [inviteUrl, setInviteUrl] = useState('')
   const [inviteCopied, setInviteCopied] = useState(false)
+
+  const [transferUserId, setTransferUserId] = useState('')
+  const [transferLoading, setTransferLoading] = useState(false)
+  const [transferError, setTransferError] = useState('')
+
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const [topicName, setTopicName] = useState('')
   const [topicColor, setTopicColor] = useState('#4f8ef7')
@@ -230,6 +238,50 @@ export default function Settings() {
       navigate('/teams')
     } catch (err) {
       alert(err.message)
+    }
+  }
+
+  const handleTransferOwnership = async (targetId) => {
+    const targetUser = members.find((m) => m.id === targetId)
+    const targetName = targetUser?.name || 'this member'
+    if (!confirm(`Are you sure you want to transfer ownership of "${team?.name}" to ${targetName}? You will remain in the team as a member.`)) {
+      return
+    }
+    setTransferLoading(true)
+    setTransferError('')
+    try {
+      await transferTeamOwnership(teamId, targetId)
+      const updatedTeam = await getTeam(teamId)
+      setTeam(updatedTeam)
+      const updatedMembers = await getMembers(teamId)
+      setMembers(updatedMembers)
+      setTransferUserId('')
+      alert(`Ownership successfully transferred to ${targetName}.`)
+    } catch (err) {
+      setTransferError(err.message || 'Failed to transfer ownership')
+      alert(err.message || 'Failed to transfer ownership')
+    } finally {
+      setTransferLoading(false)
+    }
+  }
+
+  const handleDeleteTeam = async () => {
+    if (deleteConfirmName.trim() !== team?.name) {
+      setDeleteError('Please type the exact team name to confirm deletion')
+      return
+    }
+    if (!confirm(`Are you absolutely sure you want to permanently delete "${team?.name}"? All meetings, transcripts, action items, and topic tags will be erased immediately.`)) {
+      return
+    }
+    setDeleteLoading(true)
+    setDeleteError('')
+    try {
+      await deleteTeam(teamId)
+      navigate('/teams')
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete team')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -456,9 +508,20 @@ export default function Settings() {
                             <span className="settings-member-badge">Owner</span>
                           )}
                           {isOwner && m.id !== user.id && (
-                            <button className="settings-kick-btn" onClick={() => handleKick(m.id)}>
-                              Kick
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="settings-transfer-btn"
+                                onClick={() => handleTransferOwnership(m.id)}
+                                title="Transfer team ownership to this member"
+                                disabled={transferLoading}
+                              >
+                                Make Owner
+                              </button>
+                              <button className="settings-kick-btn" onClick={() => handleKick(m.id)}>
+                                Kick
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -767,20 +830,94 @@ export default function Settings() {
 
           {tab === 'leave' && (
             <div>
-              <h2 className="settings-section-title">Leave Team</h2>
+              <h2 className="settings-section-title">Danger Zone</h2>
               {isOwner ? (
-                <p className="settings-description settings-description--warn">
-                  You are the owner of this team. Transfer ownership or delete the team before leaving.
-                </p>
+                <div className="settings-danger-zone">
+                  {/* Transfer Ownership Card */}
+                  <div className="settings-danger-card">
+                    <div className="settings-danger-card-header">
+                      <h3>Transfer Team Ownership</h3>
+                      <p>
+                        Transfer ownership of <strong>{team?.name}</strong> to another team member. You will remain in the team as an active member.
+                      </p>
+                    </div>
+                    {transferError && <div className="settings-alert settings-alert--error">{transferError}</div>}
+                    {members.filter((m) => m.id !== user?.id).length === 0 ? (
+                      <p className="settings-hint settings-hint--warn">
+                        There are no other members in this team. Invite members to transfer ownership, or delete the team below.
+                      </p>
+                    ) : (
+                      <div className="settings-danger-action-row">
+                        <select
+                          className="settings-input"
+                          style={{ maxWidth: '320px' }}
+                          value={transferUserId}
+                          onChange={(e) => setTransferUserId(e.target.value)}
+                        >
+                          <option value="">Select a team member…</option>
+                          {members
+                            .filter((m) => m.id !== user?.id)
+                            .map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.name} ({m.email})
+                              </option>
+                            ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="settings-save-btn"
+                          disabled={!transferUserId || transferLoading}
+                          onClick={() => handleTransferOwnership(Number(transferUserId))}
+                        >
+                          {transferLoading ? 'Transferring…' : 'Transfer Ownership'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delete Team Card */}
+                  <div className="settings-danger-card settings-danger-card--delete">
+                    <div className="settings-danger-card-header">
+                      <h3>Delete Team Workspace</h3>
+                      <p>
+                        Permanently delete <strong>{team?.name}</strong>. All associated meetings, transcripts, AI summaries, action items, and topic tags will be erased immediately. This action cannot be undone.
+                      </p>
+                    </div>
+                    {deleteError && <div className="settings-alert settings-alert--error">{deleteError}</div>}
+                    <div className="settings-danger-confirm-box">
+                      <label className="settings-field-label">
+                        To confirm, type <strong>{team?.name}</strong> below:
+                      </label>
+                      <input
+                        type="text"
+                        className="settings-input"
+                        placeholder={team?.name}
+                        value={deleteConfirmName}
+                        onChange={(e) => setDeleteConfirmName(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="settings-danger-btn settings-danger-btn--solid"
+                        disabled={deleteConfirmName.trim() !== team?.name || deleteLoading}
+                        onClick={handleDeleteTeam}
+                      >
+                        {deleteLoading ? 'Deleting Team…' : 'Permanently Delete This Team'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <p className="settings-description">
-                    Leaving will remove you from this team. Your contributions are not deleted.
-                  </p>
+                <div className="settings-danger-card">
+                  <div className="settings-danger-card-header">
+                    <h3>Leave Team</h3>
+                    <p className="settings-description">
+                      Leaving will remove you from <strong>{team?.name}</strong>. Your contributions and past meetings will remain with the team.
+                    </p>
+                  </div>
                   <button className="settings-danger-btn" onClick={handleLeave}>
                     Leave Team
                   </button>
-                </>
+                </div>
               )}
             </div>
           )}

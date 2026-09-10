@@ -31,7 +31,7 @@ Detailed architecture and backend documentation are centralized in the root `doc
 | `/teams/:teamId/parking-lot` | `GlobalParkingLot.jsx` | Protected | Cross-meeting parking lot view for open discussion items, with one-click "Promote to Task" migration onto the Kanban board. |
 | `/teams/:teamId/schedule` | `GlobalSchedule.jsx` | Protected | Follow-up tracking view for deferred items pending a calendar date, equipped with inline date pickers. |
 | `/teams/:teamId/archive` | `GlobalArchive.jsx` | Protected | Central repository of archived action items and tasks, allowing topic filtering and one-click item restoration. |
-| `/teams/:teamId/settings` | `Settings.jsx` | Protected | Comprehensive team configuration with dedicated tabbed views: **General** (rename), **Members** (roles & per-type notification preferences), **Topics** (color-coded meeting taxonomy), **AI Prompts** (owner-editable system prompts for all LLM stages), **Invite Link** (token generation), and **Leave Team**. |
+| `/teams/:teamId/settings` | `Settings.jsx` | Protected | Comprehensive team configuration with dedicated tabbed views: **General** (rename), **Members** (roles, per-type notification preferences, 1-click **Make Owner** transfer), **Topics** (color-coded meeting taxonomy), **AI Prompts** (owner-editable system prompts for all LLM stages), **Invite Link** (token generation), and **Danger Zone** (transfer ownership, delete team with confirmation, or leave team). |
 | `/teams/:teamId/live/:meetingId` | `Live.jsx` | Protected | Active meeting monitor featuring real-time Whisper transcript updates, multi-agent thought streams, interactive proposal alerts, Instant Clarity explainer modals, and Document Picture-in-Picture. |
 | `/teams/:teamId/review/:meetingId?` | `Review.jsx` | Protected | Post-meeting review workspace containing tabbed AI synthesis (General, Technical, Business), live thinking progress indicators, inline transcript editing with original text preservation and reversion, action item moderation, and sandboxed HTML email previews with multi-recipient dispatch. |
 | `/popup` | `MiniPopup.jsx` | Protected | Detached browser popup fallback for the live companion mini-window when the W3C Document Picture-in-Picture API is unsupported. |
@@ -42,13 +42,15 @@ Detailed architecture and backend documentation are centralized in the root `doc
 
 | Component | File Path | Purpose & Capabilities |
 |---|---|---|
+| `QuickstartModal` | `src/components/QuickstartModal.jsx` | Interactive 4-step onboarding mini-tutorial introducing MeetingMind AI's multi-agent architecture (BOLAA), bot dispatching, live Picture-in-Picture / Instant Clarity, and post-meeting Kanban triage. |
+| `ProfileModal` | `src/components/ProfileModal.jsx` | Dedicated modal allowing users to manage their account display name and upload/remove avatar photos. |
 | `LiveThinkingPanel` | `src/components/LiveThinkingPanel.jsx` | Real-time reasoning feed that displays streaming thoughts from AI personas (Scrum Master, Tech Lead, Product Manager, System) during active meetings. Supports pulse indicators, role color coding, and auto-scrolling to latest turns. |
 | `ThinkingProcess` | `src/components/ThinkingProcess.jsx` | Structured multi-agent deliberation viewer that illustrates reasoning stages (Initial Analysis, Cross-functional Discussion, Final Synthesis) with expandable thought traces and markdown formatting. |
 | `SummaryProgressIndicator` | `src/components/SummaryProgressIndicator.jsx` | Visual progress card rendered while post-meeting multi-agent LLM analysis is executing. Displays elapsed generation time, animated progress bars, live thinking traces, and an explicit `onStop` cancellation trigger. |
 | `SystemStatusTracker` | `src/components/SystemStatusTracker.jsx` | Global infrastructure and hardware diagnostics badge + modal. Displays Ollama runtime mode (Host Native Metal/CUDA vs Docker GPU vs Docker CPU), model VRAM vs RAM allocation, ping latency for Postgres, Redis, Qdrant, and Whisper STT, with tab-visibility-throttled polling (every 30s). |
 | `MeetingTopicTags` | `src/components/MeetingTopicTags.jsx` | Reusable topic badge cluster supporting chip rendering, hover remove actions (`×`), and an attached `+ Tag` dropdown with customizable drop-up or drop-down placement. |
-| `TeamSetupModal` | `src/components/TeamSetupModal.jsx` | Interactive modal allowing users to create teams and configure initial team details. |
-| `UserSetupModal` | `src/components/UserSetupModal.jsx` | Modal dialog allowing users to manage their user profile name and profile picture. |
+| `TeamSetupModal` | `src/components/TeamSetupModal.jsx` | Interactive modal allowing users to configure initial workspace topics and invite links when first entering a team. |
+| `UserSetupModal` | `src/components/UserSetupModal.jsx` | Backward-compatibility alias pointing to `QuickstartModal`. |
 
 ---
 
@@ -68,6 +70,8 @@ All communication between the frontend React application and backend services fl
 - `createTeam(name)`: Creates a new team workspace.
 - `getTeam(teamId)`: Fetches team details by ID.
 - `updateTeam(teamId, name)`: Renames a team workspace.
+- `transferTeamOwnership(teamId, newOwnerId)`: Reassigns team ownership to an existing active member (owner only).
+- `deleteTeam(teamId)`: Permanently deletes a team workspace and all associated meetings, transcripts, and records (owner only).
 - `leaveTeam(teamId)`: Removes the authenticated user from the team.
 - `getInviteLink(teamId)`: Generates a sharable invitation token.
 - `joinTeam(inviteToken)`: Joins a team using a valid invitation token.

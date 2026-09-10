@@ -664,11 +664,95 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: all 0.15s;
 }
 
-.settings-danger-btn:hover {
+.settings-danger-btn:hover:not(:disabled) {
   background: rgba(248, 81, 73, 0.1);
+}
+
+.settings-danger-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.settings-danger-btn--solid {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
+
+.settings-danger-btn--solid:hover:not(:disabled) {
+  opacity: 0.9;
+  background: #e03e3e;
+}
+
+.settings-transfer-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.settings-transfer-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-3);
+}
+
+.settings-danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-danger-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-danger-card--delete {
+  border-color: rgba(248, 81, 73, 0.35);
+  background: rgba(248, 81, 73, 0.03);
+}
+
+.settings-danger-card-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-0);
+  margin: 0 0 6px 0;
+}
+
+.settings-danger-card-header p {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.settings-danger-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-danger-confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 440px;
+  margin-top: 4px;
 }
 
 /* ── Prompt editor ─────────────────────────────────────────────────────────── */

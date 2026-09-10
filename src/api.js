@@ -142,6 +142,18 @@ async function apiFetch(path, options = {}) {
     return apiFetch(`/api/teams/${teamId}/leave`, { method: 'POST' })
   }
 
+  export async function transferTeamOwnership(teamId, newOwnerId) {
+    return apiFetch(`/api/teams/${teamId}/transfer-ownership`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_owner_id: newOwnerId }),
+    })
+  }
+
+  export async function deleteTeam(teamId) {
+    return apiFetch(`/api/teams/${teamId}`, { method: 'DELETE' })
+  }
+
   export async function getInviteLink(teamId) {
     return apiFetch(`/api/teams/${teamId}/invite`)
   }
