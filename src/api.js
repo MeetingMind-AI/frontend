@@ -208,7 +208,7 @@ async function apiFetch(path, options = {}) {
 
   // ── Meetings ──────────────────────────────────────────────────────────────────
 
-  export async function startMeeting(platform, nativeId, teamId = null, passcode = '') {
+  export async function startMeeting(platform, nativeId, teamId = null, passcode = '', meetingType = 'general') {
     return apiFetch('/api/meetings/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -216,6 +216,7 @@ async function apiFetch(path, options = {}) {
         platform,
         native_id: nativeId,
         team_id: teamId,
+        meeting_type: meetingType,
         ...(passcode ? { passcode } : {}),
       }),
     })
@@ -392,4 +393,10 @@ async function apiFetch(path, options = {}) {
     }
 
     return { close() { ws.close() } }
+  }
+
+  // ── System Diagnostics ────────────────────────────────────────────────────────
+
+  export async function getSystemStatus() {
+    return apiFetch('/api/system/status')
   }

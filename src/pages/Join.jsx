@@ -15,9 +15,36 @@ function Join() {
   }
 
   const agents = [
-    { icon: '🏃', label: 'Scrum Master', desc: 'Process & velocity' },
-    { icon: '📊', label: 'PM Agent', desc: 'Business & risk' },
-    { icon: '⚙️', label: 'Dev Agent', desc: 'Technical clarity' },
+    {
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--yellow, #f59e0b)' }}>
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+      ),
+      label: 'Scrum Master',
+      desc: 'Process & velocity',
+    },
+    {
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--purple, #a855f7)' }}>
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+      ),
+      label: 'PM Agent',
+      desc: 'Business & risk',
+    },
+    {
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent, #4f8ef7)' }}>
+          <polyline points="16 18 22 12 16 6" />
+          <polyline points="8 6 2 12 8 18" />
+        </svg>
+      ),
+      label: 'Dev Agent',
+      desc: 'Technical clarity',
+    },
   ]
 
   return (

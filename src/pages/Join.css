@@ -81,6 +81,9 @@
 .join-agent-icon {
   font-size: 18px;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .join-agent-name {

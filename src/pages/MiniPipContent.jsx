@@ -4,11 +4,36 @@ import './MiniPopup.css'
 
 const PROPOSAL_LABELS = { to_do: 'TO DO', parking_lot: 'PARKING LOT', to_schedule: 'TO SCHEDULE', blocker: 'BLOCKER' }
 
-export default function MiniPipContent({ meetingId, initialProposals, onGoBack }) {
+export default function MiniPipContent({
+  meetingId,
+  initialProposals,
+  onGoBack,
+  meetingType = 'general',
+  createdAt = null,
+  initialElapsed = 0,
+}) {
   const [proposals, setProposals] = useState(initialProposals)
+  const [mType, setMType] = useState(meetingType)
+  const [elapsed, setElapsed] = useState(initialElapsed)
   const [explainLoading, setExplainLoading] = useState(false)
   const [explainResult, setExplainResult] = useState(null)
   const [explainTitle, setExplainTitle] = useState('')
+
+  useEffect(() => {
+    if (createdAt) {
+      const startMs = new Date(createdAt).getTime()
+      setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
+    }
+    const t = setInterval(() => {
+      if (createdAt) {
+        const startMs = new Date(createdAt).getTime()
+        setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
+      } else {
+        setElapsed((e) => e + 1)
+      }
+    }, 1000)
+    return () => clearInterval(t)
+  }, [createdAt])
 
   // Listen for the main webpage broadcasting its exact state
   useEffect(() => {
@@ -16,6 +41,10 @@ export default function MiniPipContent({ meetingId, initialProposals, onGoBack }
     ch.onmessage = (e) => {
       if (e.data.type === 'sync_proposals') {
         setProposals(e.data.pending)
+      }
+      if (e.data.type === 'sync_timer') {
+        if (typeof e.data.elapsed === 'number') setElapsed(e.data.elapsed)
+        if (e.data.meetingType) setMType(e.data.meetingType)
       }
     }
     return () => ch.close()
@@ -56,6 +85,52 @@ export default function MiniPipContent({ meetingId, initialProposals, onGoBack }
           </svg>
           MeetingMind
         </div>
+        {mType === 'daily_standup' ? (() => {
+          const remaining = 900 - elapsed
+          const isOvertime = remaining < 0
+          const isWarning = !isOvertime && remaining <= 180
+          const displaySecs = isOvertime ? Math.abs(remaining) : Math.max(0, remaining)
+          const m = Math.floor(displaySecs / 60)
+          const s = displaySecs % 60
+          const formatted = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+
+          return (
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                background: isOvertime
+                  ? 'rgba(239, 68, 68, 0.2)'
+                  : isWarning
+                  ? 'rgba(245, 158, 11, 0.2)'
+                  : 'rgba(16, 185, 129, 0.2)',
+                color: isOvertime ? 'var(--red, #ef4444)' : isWarning ? 'var(--yellow, #f59e0b)' : 'var(--green, #10b981)',
+                border: `1px solid ${isOvertime ? '#ef444466' : isWarning ? '#f59e0b66' : '#10b98166'}`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+              title={isOvertime ? 'Standup Overtime' : 'Timebox Remaining'}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{isOvertime ? `+${formatted}` : formatted}</span>
+            </span>
+          )
+        })() : (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span>{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}</span>
+          </span>
+        )}
         <button className="mp-back-btn" onClick={onGoBack} title="Close panel and return to transcript">
           ← Transcript
         </button>
@@ -120,14 +195,61 @@ export default function MiniPipContent({ meetingId, initialProposals, onGoBack }
                 </div>
                 <div className="mp-proposal-text">{p.content}</div>
 
-                {/* Accept / Reject Buttons */}
-                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                {/* Accept / Park / Reject Buttons */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                   <button
                     onClick={() => handleAction(p, 'accepted')}
-                    style={{ flex: 1, padding: '6px', fontSize: '11px', cursor: 'pointer', background: 'var(--green)', color: 'var(--bg-1)', border: 'none', borderRadius: '4px', fontWeight: 600 }}
+                    style={{
+                      flex: 1,
+                      padding: '6px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      background: p.type === 'parking_lot' ? 'var(--yellow)' : 'var(--green)',
+                      color: 'var(--bg-1)',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                    }}
                   >
-                    Accept
+                    {p.type === 'parking_lot' ? (
+                      <>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M9 17V7h4a3 3 0 0 1 0 6H9" />
+                        </svg>
+                        Park
+                      </>
+                    ) : 'Accept'}
                   </button>
+                  {p.type !== 'parking_lot' && (
+                    <button
+                      onClick={() => handleAction(p, 'park')}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        background: 'rgba(234, 179, 8, 0.2)',
+                        color: 'var(--yellow)',
+                        border: '1px solid rgba(234, 179, 8, 0.4)',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      title="Move to parking lot"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9 17V7h4a3 3 0 0 1 0 6H9" />
+                      </svg>
+                      Park
+                    </button>
+                  )}
                   <button
                     onClick={() => handleAction(p, 'rejected')}
                     style={{ flex: 1, padding: '6px', fontSize: '11px', cursor: 'pointer', background: 'transparent', color: 'var(--red)', border: '1px solid var(--red)', borderRadius: '4px', fontWeight: 600 }}

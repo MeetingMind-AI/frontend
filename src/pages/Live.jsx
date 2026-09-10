@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { leaveMeeting, openInsightSocket, explainMeeting, getActions, updateAction, getMeeting, deleteMeeting, getMembers } from '../api'
+import { isNotificationTypeActive } from '../utils'
 import { useAuth } from '../contexts/AuthContext'
 import MiniPipContent from './MiniPipContent'
 import LiveThinkingPanel from '../components/LiveThinkingPanel'
@@ -80,6 +81,15 @@ function Live() {
   const [explainLoading, setExplainLoading] = useState(false)
   const [explainTime, setExplainTime] = useState(2)
   const [elapsed, setElapsed] = useState(0)
+  const [meetingType, setMeetingType] = useState('general')
+  const [meetingCreatedAt, setMeetingCreatedAt] = useState(null)
+  const [userRole, setUserRole] = useState('team_member')
+  const [isHostOrOwner, setIsHostOrOwner] = useState(false)
+  const userRoleRef = useRef('team_member')
+  const isHostOrOwnerRef = useRef(false)
+  useEffect(() => { userRoleRef.current = userRole }, [userRole])
+  useEffect(() => { isHostOrOwnerRef.current = isHostOrOwner }, [isHostOrOwner])
+
   const [wsStatus, setWsStatus] = useState(parsedMeetingId ? 'connecting' : 'disconnected')
   const [botStatus, setBotStatus] = useState(null)
   const botStatusRef = useRef(null)
@@ -110,18 +120,16 @@ function Live() {
       .then((members) => {
         const me = members.find((m) => m.id === user.id)
         if (!me) return
+        const role = me.role === 'admin' ? 'scrum_master' : me.role === 'member' ? 'team_member' : (me.role || 'team_member')
+        setUserRole(role)
+        userRoleRef.current = role
+        const isLead = Boolean(me.is_owner || role === 'scrum_master')
+        setIsHostOrOwner(isLead)
+        isHostOrOwnerRef.current = isLead
         const prefs = me.notification_preferences || []
-        // Any type with a "type:<key>:off" entry in prefs is suppressed
         const ALL_TYPES = ['insight', 'to_do', 'parking_lot', 'to_schedule', 'blocker']
-        const blocked = new Set(
-          prefs
-            .filter((p) => p.startsWith('type:') && p.endsWith(':off'))
-            .map((p) => p.replace(/^type:/, '').replace(/:off$/, ''))
-        )
-        // If nothing is blocked, keep notifAllowedRef as null (allow all)
-        if (blocked.size > 0) {
-          notifAllowedRef.current = new Set(ALL_TYPES.filter((t) => !blocked.has(t)))
-        }
+        const allowed = ALL_TYPES.filter((t) => isNotificationTypeActive(prefs, `type:${t}`, role))
+        notifAllowedRef.current = new Set(allowed)
       })
       .catch(() => {})
   }, [teamId, user?.id])
@@ -131,6 +139,50 @@ function Live() {
     if (notifAllowedRef.current === null) return true // no restrictions
     return notifAllowedRef.current.has(typeKey)
   }, [])
+
+  /** Returns true if the current user role should receive intrusive toast alert and chime */
+  const shouldAlertUserForProposal = useCallback((proposal) => {
+    if (!proposal) return false
+    const role = userRoleRef.current
+    const isHost = isHostOrOwnerRef.current
+    const pType = (proposal.type || proposal.action_type || 'to_do').toLowerCase()
+    const pContent = (proposal.content || '').toLowerCase()
+    const pTags = Array.isArray(proposal.tags) ? proposal.tags.map((t) => String(t).toLowerCase()) : []
+
+    // If the user's notification preferences suppress this type, do not alert
+    if (notifAllowedRef.current !== null && !notifAllowedRef.current.has(pType)) {
+      return false
+    }
+
+    // Direct assignment check: ANY user assigned to a proposal receives an alert
+    if (user) {
+      if (proposal.assignee_id && Number(proposal.assignee_id) === Number(user.id)) {
+        return true
+      }
+      if (proposal.assignee && user.name && proposal.assignee.toLowerCase() === user.name.toLowerCase()) {
+        return true
+      }
+      if (user.name && pContent.includes(user.name.toLowerCase())) {
+        return true
+      }
+    }
+
+    // 1. Scrum Master / Host: receives toast alerts for all operational proposals
+    if (isHost || role === 'scrum_master') {
+      return ['to_do', 'parking_lot', 'to_schedule', 'blocker'].includes(pType)
+    }
+
+    // 2. Product Manager: receives insights, business, and scope proposals
+    if (role === 'product_manager') {
+      if (['insight', 'to_do'].includes(pType)) return true
+      if (pTags.includes('business') || pTags.includes('scope')) return true
+      if (pContent.includes('business') || pContent.includes('scope') || pContent.includes('feature') || pContent.includes('requirement')) return true
+      return false
+    }
+
+    // 3. Team Member (Developer): kept quiet by default unless assigned (handled above)
+    return false
+  }, [user])
 
   const addThought = useCallback((thought) => {
     setLiveThoughts((prev) => [
@@ -180,26 +232,26 @@ function Live() {
             ...(actions.to_do?.pending ?? []),
             ...(actions.parking_lot?.pending ?? []),
             ...(actions.to_schedule?.pending ?? []),
-            ...(actions.blockers?.pending ?? []),
+            ...(actions.blocker?.pending ?? actions.blockers?.pending ?? []),
           ]
             .map(p => ({ ...p, type: p.type || p.action_type }))
-            .filter(p => isNotifAllowed(p.type || 'to_do'))
           setPendingProposals(allPending)
           
           const allAccepted = [
             ...(actions.to_do?.accepted ?? []),
             ...(actions.parking_lot?.accepted ?? []),
             ...(actions.to_schedule?.accepted ?? []),
-            ...(actions.blockers?.accepted ?? []),
+            ...(actions.blocker?.accepted ?? actions.blockers?.accepted ?? []),
           ]
             .map(p => ({ ...p, type: p.type || p.action_type }))
-            .filter(p => isNotifAllowed(p.type || 'to_do'))
           setAcceptedProposals(allAccepted)
           
           if (allPending.length > 0) {
             const latest = allPending[allPending.length - 1]
-            setToastProposal(latest)
-            playProposalSound(latest.type)
+            if (shouldAlertUserForProposal(latest)) {
+              setToastProposal(latest)
+              playProposalSound(latest.type)
+            }
           }
         })
       },
@@ -279,16 +331,16 @@ function Live() {
         })
       },
       onProposal: (proposal) => {
-        const proposalType = proposal.type || 'to_do'
-        if (!isNotifAllowed(proposalType)) return
         setPendingProposals((prev) => {
           if (prev.some(p => p.id === proposal.id || (p.content === proposal.content && p.type === proposal.type))) {
             return prev
           }
           return [...prev, proposal]
         })
-        setToastProposal(proposal)
-        playProposalSound(proposal.type)
+        if (shouldAlertUserForProposal(proposal)) {
+          setToastProposal(proposal)
+          playProposalSound(proposal.type)
+        }
         channelRef.current?.postMessage({ type: 'proposal', proposal })
         addThought({
           agent: 'scrum_master',
@@ -308,21 +360,42 @@ function Live() {
     })
     wsRef.current = ws
     return () => { ws.close(); wsRef.current = null }
-  }, [parsedMeetingId, addThought, isNotifAllowed])
+  }, [parsedMeetingId, addThought, isNotifAllowed, shouldAlertUserForProposal])
 
 
+
+  const meetingCreatedAtRef = useRef(meetingCreatedAt)
+  useEffect(() => { meetingCreatedAtRef.current = meetingCreatedAt }, [meetingCreatedAt])
 
   useEffect(() => {
-    if (!parsedMeetingId) {
-      const t = setInterval(() => setElapsed((e) => e + 1), 1000)
-      return () => clearInterval(t)
-    }
+    const t = setInterval(() => {
+      if (meetingCreatedAtRef.current) {
+        const startMs = new Date(meetingCreatedAtRef.current).getTime()
+        setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
+      } else {
+        setElapsed((e) => e + 1)
+      }
+    }, 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    if (!parsedMeetingId) return
     getMeeting(parsedMeetingId).then((data) => {
       if (data?.status === 'completed' || data?.is_summarizing) {
         navigate(`/teams/${teamId}/review/${parsedMeetingId}`)
         return
       }
+      if (data?.meeting_type) {
+        setMeetingType(data.meeting_type)
+      }
+      if (data?.created_by === user?.id) {
+        setIsHostOrOwner(true)
+        isHostOrOwnerRef.current = true
+      }
       if (data?.created_at) {
+        setMeetingCreatedAt(data.created_at)
+        meetingCreatedAtRef.current = data.created_at
         const startMs = new Date(data.created_at).getTime()
         setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
       }
@@ -331,9 +404,7 @@ function Live() {
         botStatusRef.current = data.status
       }
     }).catch(() => {})
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000)
-    return () => clearInterval(t)
-  }, [parsedMeetingId, teamId, navigate])
+  }, [parsedMeetingId, teamId, navigate, user?.id])
 
   useEffect(() => {
     if (!parsedMeetingId) return
@@ -341,6 +412,9 @@ function Live() {
       if (['completed', 'failed'].includes(botStatusRef.current)) return
       getMeeting(parsedMeetingId)
         .then((data) => {
+          if (data?.meeting_type) {
+            setMeetingType(data.meeting_type)
+          }
           if (data?.status) {
             setBotStatus(data.status)
             botStatusRef.current = data.status
@@ -383,6 +457,8 @@ function Live() {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [transcript])
 
+  const canModerate = Boolean(isHostOrOwner || userRole === 'scrum_master')
+
   const formatTime = (s) => {
     const h = Math.floor(s / 3600)
     const m = Math.floor((s % 3600) / 60)
@@ -402,6 +478,17 @@ function Live() {
     setToastProposal(null)
   }
 
+  const handleParkProposal = async (proposal) => {
+    try {
+      await updateAction(parsedMeetingId, proposal.id, 'accepted', undefined, undefined, 'parking_lot')
+    } catch (e) {
+      console.warn('[Live] park proposal failed:', e)
+    }
+    setPendingProposals((prev) => prev.filter((p) => p.id !== proposal.id))
+    setAcceptedProposals((prev) => [...prev, { ...proposal, type: 'parking_lot', status: 'accepted' }])
+    setToastProposal(null)
+  }
+
   const handleRejectProposal = async (proposal) => {
     try {
       await updateAction(parsedMeetingId, proposal.id, 'rejected')
@@ -414,8 +501,8 @@ function Live() {
 
   // 1. Keep a stable reference to our action handlers so the event listener always uses the latest version
   useEffect(() => {
-    actionHandlersRef.current = { accept: handleAcceptProposal, reject: handleRejectProposal }
-  }, [handleAcceptProposal, handleRejectProposal])
+    actionHandlersRef.current = { accept: handleAcceptProposal, reject: handleRejectProposal, park: handleParkProposal }
+  }, [handleAcceptProposal, handleRejectProposal, handleParkProposal])
 
   // 2. Establish the two-way sync channel
   useEffect(() => {
@@ -427,11 +514,21 @@ function Live() {
     ch.onmessage = (e) => {
       if (e.data.type === 'action_proposal') {
         if (e.data.action === 'accepted') actionHandlersRef.current.accept?.(e.data.proposal)
+        if (e.data.action === 'park') actionHandlersRef.current.park?.(e.data.proposal)
         if (e.data.action === 'rejected') actionHandlersRef.current.reject?.(e.data.proposal)
       }
     }
     return () => { ch.close(); channelRef.current = null }
   }, [parsedMeetingId])
+
+  // 3. Broadcast timer updates to PiP window
+  useEffect(() => {
+    channelRef.current?.postMessage({
+      type: 'sync_timer',
+      elapsed,
+      meetingType,
+    })
+  }, [elapsed, meetingType])
 
   // 3. Push state updates TO the PiP window whenever pendingProposals changes on the main page
   useEffect(() => {
@@ -591,6 +688,9 @@ function Live() {
         <MiniPipContent
           meetingId={parsedMeetingId}
           initialProposals={allPendingProposals}
+          meetingType={meetingType}
+          createdAt={meetingCreatedAt}
+          initialElapsed={elapsed}
           onGoBack={() => {
             pipWindow.close()
             mainWindow.focus()  // focus opener per Google Developers reference
@@ -612,7 +712,7 @@ function Live() {
       if (!fromBlur) setPipError(e.message || 'Failed to open PiP')
       console.error('[Live] documentPictureInPicture.requestWindow() failed:', e)
     }
-  }, [parsedMeetingId, teamId])
+  }, [parsedMeetingId, teamId, meetingType, meetingCreatedAt, elapsed])
 
   // Try to open PiP automatically when user switches to another window/app.
   // The blur event is not a formal user gesture, so requestWindow() may throw
@@ -646,13 +746,125 @@ function Live() {
             MeetingMind
           </div>
           <div className="live-meeting-title">{meetingTitle}</div>
+          {(() => {
+            const config = {
+              daily_standup: {
+                label: 'Daily Stand-up',
+                color: '#f59e0b',
+                bg: 'rgba(245, 158, 11, 0.12)',
+                icon: (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                ),
+              },
+              sprint_planning: {
+                label: 'Sprint Sync',
+                color: '#8b5cf6',
+                bg: 'rgba(139, 92, 246, 0.12)',
+                icon: (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                  </svg>
+                ),
+              },
+              general: {
+                label: 'General',
+                color: '#64748b',
+                bg: 'rgba(100, 116, 139, 0.12)',
+                icon: (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                ),
+              },
+            }[meetingType] || null
+
+            if (!config) return null
+            return (
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: config.color,
+                  background: config.bg,
+                  border: `1px solid ${config.color}44`,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  marginLeft: '8px',
+                }}
+              >
+                {config.icon}
+                {config.label}
+              </span>
+            )
+          })()}
         </div>
 
         <div className="live-header-center">
           <span className="live-live-badge">
             <span className="live-live-dot" /> LIVE
           </span>
-          <span className="live-timer">{formatTime(elapsed)}</span>
+          {meetingType === 'daily_standup' ? (() => {
+            const remaining = 900 - elapsed
+            const isOvertime = remaining < 0
+            const isWarning = !isOvertime && remaining <= 180
+            const displaySecs = isOvertime ? Math.abs(remaining) : Math.max(0, remaining)
+            const m = Math.floor(displaySecs / 60)
+            const s = displaySecs % 60
+            const formatted = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+
+            return (
+              <div
+                className="live-standup-timer-hud"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '3px 10px',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  fontVariantNumeric: 'tabular-nums',
+                  background: isOvertime
+                    ? 'rgba(239, 68, 68, 0.15)'
+                    : isWarning
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : 'rgba(16, 185, 129, 0.15)',
+                  border: `1px solid ${
+                    isOvertime
+                      ? 'rgba(239, 68, 68, 0.4)'
+                      : isWarning
+                      ? 'rgba(245, 158, 11, 0.4)'
+                      : 'rgba(16, 185, 129, 0.4)'
+                  }`,
+                  color: isOvertime ? 'var(--red, #ef4444)' : isWarning ? 'var(--yellow, #f59e0b)' : 'var(--green, #10b981)',
+                }}
+                title={isOvertime ? 'Standup has exceeded 15-minute timebox' : `${formatted} remaining in 15m timebox`}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  Standup:
+                </span>
+                <span>{isOvertime ? `+${formatted} overtime` : `${formatted} remaining`}</span>
+              </div>
+            )
+          })() : (
+            <span className="live-timer">{formatTime(elapsed)}</span>
+          )}
         </div>
 
         <div className="live-header-right">
@@ -858,19 +1070,73 @@ function Live() {
             </div>
             <p className="live-proposal-content">{toastProposal.content}</p>
             <div className="live-proposal-actions">
-              <button className="live-proposal-accept" onClick={() => handleAcceptProposal(toastProposal)}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Accept
-              </button>
-              <button className="live-proposal-reject" onClick={() => handleRejectProposal(toastProposal)}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-                Reject
-              </button>
+              {canModerate ? (
+                toastProposal.type === 'parking_lot' ? (
+                  <button
+                    className="live-proposal-accept"
+                    style={{ background: 'var(--yellow)', color: '#000', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => handleAcceptProposal(toastProposal)}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M9 17V7h4a3 3 0 0 1 0 6H9" />
+                    </svg>
+                    Move to Parking Lot
+                  </button>
+                ) : (
+                  <>
+                    <button className="live-proposal-accept" onClick={() => handleAcceptProposal(toastProposal)}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Accept
+                    </button>
+                    <button
+                      className="live-proposal-park"
+                      style={{
+                        background: 'rgba(234, 179, 8, 0.18)',
+                        border: '1px solid rgba(234, 179, 8, 0.4)',
+                        color: 'var(--yellow)',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                      onClick={() => handleParkProposal(toastProposal)}
+                      title="Park this discussion topic offline"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9 17V7h4a3 3 0 0 1 0 6H9" />
+                      </svg>
+                      Park
+                    </button>
+                    <button className="live-proposal-reject" onClick={() => handleRejectProposal(toastProposal)}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                      Reject
+                    </button>
+                  </>
+                )
+              ) : (
+                <>
+                  <button className="live-proposal-accept" onClick={() => handleAcceptProposal(toastProposal)}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Accept & Commit
+                  </button>
+                  <button className="live-proposal-reject" onClick={() => setToastProposal(null)}>
+                    Dismiss
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -970,12 +1236,65 @@ function Live() {
                           </div>
                           <p className="live-proposal-card-text">{p.content}</p>
                           <div className="live-proposal-card-actions">
-                            <button className="live-proposal-accept live-proposal-accept--sm" onClick={() => handleAcceptProposal(p)}>
-                              Accept
-                            </button>
-                            <button className="live-proposal-reject live-proposal-reject--sm" onClick={() => handleRejectProposal(p)}>
-                              Reject
-                            </button>
+                            {canModerate ? (
+                              <>
+                                <button
+                                  className="live-proposal-accept live-proposal-accept--sm"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  onClick={() => handleAcceptProposal(p)}
+                                >
+                                  {p.type === 'parking_lot' ? (
+                                    <>
+                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M9 17V7h4a3 3 0 0 1 0 6H9" />
+                                      </svg>
+                                      Move to Parking Lot
+                                    </>
+                                  ) : 'Accept'}
+                                </button>
+                                {p.type !== 'parking_lot' && (
+                                  <button
+                                    className="live-proposal-park live-proposal-park--sm"
+                                    style={{
+                                      background: 'rgba(234, 179, 8, 0.18)',
+                                      border: '1px solid rgba(234, 179, 8, 0.4)',
+                                      color: 'var(--yellow)',
+                                      padding: '5px 8px',
+                                      borderRadius: '4px',
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                    }}
+                                    onClick={() => handleParkProposal(p)}
+                                  >
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <circle cx="12" cy="12" r="10" />
+                                      <path d="M9 17V7h4a3 3 0 0 1 0 6H9" />
+                                    </svg>
+                                    Park
+                                  </button>
+                                )}
+                                <button className="live-proposal-reject live-proposal-reject--sm" onClick={() => handleRejectProposal(p)}>
+                                  Reject
+                                </button>
+                              </>
+                            ) : (
+                              (p.assignee_id && Number(p.assignee_id) === Number(user?.id)) ||
+                              (p.assignee && user?.name && p.assignee.toLowerCase() === user.name.toLowerCase()) ||
+                              (user?.name && (p.content || '').toLowerCase().includes(user.name.toLowerCase())) ? (
+                                <button className="live-proposal-accept live-proposal-accept--sm" onClick={() => handleAcceptProposal(p)}>
+                                  Accept & Commit
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: '11px', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                                  Pending Moderator Review
+                                </span>
+                              )
+                            )}
                           </div>
                         </div>
                       ))}

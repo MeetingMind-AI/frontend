@@ -211,7 +211,13 @@ export default function UserSetupModal({ onClose }) {
                 <div className="usm-checkbox-card" onClick={() => setFocusTech(!focusTech)}>
                   <input type="checkbox" checked={focusTech} onChange={() => {}} />
                   <div className="usm-checkbox-info">
-                    <span className="usm-checkbox-title">🛠️ Technical Architecture & Decisions</span>
+                    <span className="usm-checkbox-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}>
+                        <polyline points="16 18 22 12 16 6" />
+                        <polyline points="8 6 2 12 8 18" />
+                      </svg>
+                      Technical Architecture & Decisions
+                    </span>
                     <span className="usm-checkbox-sub">Highlights code architecture, schema changes, and engineering blockers.</span>
                   </div>
                 </div>
@@ -219,7 +225,14 @@ export default function UserSetupModal({ onClose }) {
                 <div className="usm-checkbox-card" onClick={() => setFocusBiz(!focusBiz)}>
                   <input type="checkbox" checked={focusBiz} onChange={() => {}} />
                   <div className="usm-checkbox-info">
-                    <span className="usm-checkbox-title">📊 Product & Business Roadmap</span>
+                    <span className="usm-checkbox-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--purple, #a855f7)' }}>
+                        <line x1="18" y1="20" x2="18" y2="10" />
+                        <line x1="12" y1="20" x2="12" y2="4" />
+                        <line x1="6" y1="20" x2="6" y2="14" />
+                      </svg>
+                      Product & Business Roadmap
+                    </span>
                     <span className="usm-checkbox-sub">Highlights customer requirements, UX topics, and timeline alignment.</span>
                   </div>
                 </div>
@@ -255,17 +268,42 @@ export default function UserSetupModal({ onClose }) {
 
               <div className="usm-features-grid">
                 <div className="usm-feature-card">
-                  <div className="usm-feature-icon">🎙️</div>
+                  <div className="usm-feature-icon" style={{ color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  </div>
                   <h4 className="usm-feature-title">Live ASR & Clarity</h4>
                   <p className="usm-feature-desc">Real-time meeting transcription with 1-click on-demand AI explanations.</p>
                 </div>
                 <div className="usm-feature-card">
-                  <div className="usm-feature-icon">🤖</div>
+                  <div className="usm-feature-icon" style={{ color: 'var(--purple)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="4" y="4" width="16" height="16" rx="2" />
+                      <rect x="9" y="9" width="6" height="6" />
+                      <line x1="9" y1="1" x2="9" y2="4" />
+                      <line x1="15" y1="1" x2="15" y2="4" />
+                      <line x1="9" y1="20" x2="9" y2="23" />
+                      <line x1="15" y1="20" x2="15" y2="23" />
+                      <line x1="20" y1="9" x2="23" y2="9" />
+                      <line x1="20" y1="14" x2="23" y2="14" />
+                      <line x1="1" y1="9" x2="4" y2="9" />
+                      <line x1="1" y1="14" x2="4" y2="14" />
+                    </svg>
+                  </div>
                   <h4 className="usm-feature-title">Multi-Agent Debate</h4>
                   <p className="usm-feature-desc">Tech Lead and PM personas analyze tradeoffs and find alignment automatically.</p>
                 </div>
                 <div className="usm-feature-card">
-                  <div className="usm-feature-icon">📋</div>
+                  <div className="usm-feature-icon" style={{ color: 'var(--green)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                    </svg>
+                  </div>
                   <h4 className="usm-feature-title">Agile Kanban Sync</h4>
                   <p className="usm-feature-desc">Approve or edit AI-extracted action items and parking lot topics in seconds.</p>
                 </div>

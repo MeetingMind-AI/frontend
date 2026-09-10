@@ -68,6 +68,7 @@ export function meetingToCard(m) {
     duration: durationDisplay,
     reviewed: m.status === 'completed' && !isSummarizing,
     isSummarizing,
+    meeting_type: m.meeting_type === 'sprint' ? 'sprint_planning' : (m.meeting_type || 'general'),
     actionItemCount: sm?.to_do?.length ?? 0,
     parkingLotCount: sm?.parking_lot?.length ?? 0,
     summary: isSummarizing
@@ -174,12 +175,44 @@ export function buildScheduleItems(actions) {
   return items
 }
 
+export function buildTaskItems(actions) {
+  const items = []
+  const sources = [
+    { list: actions.to_do?.pending ?? [], type: 'todo', status: 'suggested' },
+    { list: actions.to_do?.accepted ?? [], type: 'todo', status: 'approved' },
+    { list: actions.parking_lot?.pending ?? [], type: 'parking', status: 'suggested' },
+    { list: actions.parking_lot?.accepted ?? [], type: 'parking', status: 'approved' },
+    { list: actions.to_schedule?.pending ?? [], type: 'schedule', status: 'suggested' },
+    { list: actions.to_schedule?.accepted ?? [], type: 'schedule', status: 'approved' },
+    { list: actions.blocker?.pending ?? actions.blockers?.pending ?? [], type: 'blocker', status: 'suggested' },
+    { list: actions.blocker?.accepted ?? actions.blockers?.accepted ?? [], type: 'blocker', status: 'approved' },
+  ]
+  for (const { list, type, status } of sources) {
+    for (const p of list) {
+      items.push({
+        id: p.id,
+        meetingId: p.meeting_id,
+        title: p.content,
+        meeting: formatMeetingTitle(p.meeting_title),
+        date: formatDate(p.meeting_date),
+        action_type: type,
+        status,
+        assignee: p.assignee,
+        tags: p.tags || [],
+        topics: p.topics || [],
+      })
+    }
+  }
+  return items
+}
+
 export function buildArchiveItems(actions) {
   const items = []
   const sources = [
     { list: actions.to_do?.archived ?? [], type: 'todo' },
     { list: actions.parking_lot?.archived ?? [], type: 'parking_lot' },
-    { list: actions.to_schedule?.archived ?? [], type: 'schedule' }
+    { list: actions.to_schedule?.archived ?? [], type: 'schedule' },
+    { list: actions.blocker?.archived ?? actions.blockers?.archived ?? [], type: 'blocker' },
   ]
   for (const { list, type } of sources) {
     for (const p of list) {
@@ -197,4 +230,38 @@ export function buildArchiveItems(actions) {
     }
   }
   return items
+}
+
+export function isNotificationTypeActive(prefs, typeKey, role = 'team_member') {
+  const pList = Array.isArray(prefs) ? prefs : []
+  // Normalize typeKey to ensure it starts with 'type:'
+  const canonicalKey = typeKey.startsWith('type:') ? typeKey : `type:${typeKey}`
+
+  // 1. Explicitly turned off with :off
+  if (pList.includes(`${canonicalKey}:off`)) return false
+  // 2. Explicitly turned on
+  if (pList.includes(canonicalKey)) return true
+
+  // 3. If prefs has any positive type: entries, treat it as an allowlist
+  const positiveTypes = pList.filter(
+    (p) => typeof p === 'string' && p.startsWith('type:') && !p.endsWith(':off')
+  )
+  if (positiveTypes.length > 0) {
+    return false // Not in positive allowlist
+  }
+
+  // 4. If prefs has :off entries, anything not marked :off is active
+  const hasOffEntries = pList.some(
+    (p) => typeof p === 'string' && p.startsWith('type:') && p.endsWith(':off')
+  )
+  if (hasOffEntries) {
+    return true
+  }
+
+  // 5. Fallback to role defaults
+  const normRole = role === 'admin' ? 'scrum_master' : role === 'member' ? 'team_member' : (role || 'team_member')
+  if (normRole === 'scrum_master') return true
+  if (normRole === 'product_manager') return ['type:insight', 'type:to_do'].includes(canonicalKey)
+  if (normRole === 'team_member') return canonicalKey === 'type:to_do'
+  return true
 }

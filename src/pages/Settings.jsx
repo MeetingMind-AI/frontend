@@ -6,6 +6,7 @@ import {
   getInviteLink, leaveTeam,
   getTeamPrompts, updateTeamPrompt, resetTeamPrompt,
 } from '../api'
+import { isNotificationTypeActive } from '../utils'
 import { useAuth } from '../contexts/AuthContext'
 import './Settings.css'
 
@@ -47,11 +48,62 @@ const PROMPT_GROUPS = [
 ]
 
 const NOTIFICATION_TYPES = [
-  { key: 'type:insight',     label: 'Insights',     icon: '💡', description: 'Real-time Scrum Master observations' },
-  { key: 'type:to_do',      label: 'To Do',         icon: '✅', description: 'Action item proposals' },
-  { key: 'type:parking_lot',label: 'Parking Lot',   icon: '🅿️', description: 'Parked discussion items' },
-  { key: 'type:to_schedule', label: 'To Schedule',  icon: '📅', description: 'Items flagged for scheduling' },
-  { key: 'type:blocker',    label: 'Blockers',      icon: '🚧', description: 'Blocker alerts' },
+  {
+    key: 'type:insight',
+    label: 'Insights',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 0 0-7-7z"/>
+      </svg>
+    ),
+    description: 'Real-time Scrum Master observations',
+  },
+  {
+    key: 'type:to_do',
+    label: 'To Do',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 11 12 14 22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    ),
+    description: 'Action item proposals',
+  },
+  {
+    key: 'type:parking_lot',
+    label: 'Parking Lot',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>
+      </svg>
+    ),
+    description: 'Parked discussion items',
+  },
+  {
+    key: 'type:to_schedule',
+    label: 'To Schedule',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+    ),
+    description: 'Items flagged for scheduling',
+  },
+  {
+    key: 'type:blocker',
+    label: 'Blockers',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+      </svg>
+    ),
+    description: 'Blocker alerts',
+  },
 ]
 
 const TABS = [
@@ -365,80 +417,130 @@ export default function Settings() {
             <div>
               <h2 className="settings-section-title">Members</h2>
               <div className="settings-member-list">
-                {members.map((m) => (
-                  <div key={m.id} className="settings-member">
-                    <div className="settings-member-avatar">
-                      {m.photo_url
-                        ? <img src={m.photo_url} alt={m.name} />
-                        : <span>{initials(m.name)}</span>}
-                    </div>
-                    <div className="settings-member-info" style={{ flex: 1 }}>
-                      <span className="settings-member-name">{m.name}</span>
-                      <span className="settings-member-email">{m.email}</span>
+                {members.map((m) => {
+                  const roleKey = m.role === 'admin' ? 'scrum_master' : m.role === 'member' ? 'team_member' : (m.role || 'team_member')
+                  const roleConfig = {
+                    scrum_master: { label: 'Scrum Master', color: '#4f8ef7', bg: 'rgba(79, 142, 247, 0.15)' },
+                    product_manager: { label: 'Product Manager', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
+                    team_member: { label: 'Product Team Member', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+                  }[roleKey] || { label: roleKey, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
+
+                  return (
+                    <div key={m.id} className="settings-member-card">
+                      {/* Header row: Avatar, Identity, and Actions */}
+                      <div className="settings-member-card-header">
+                        <div className="settings-member-avatar">
+                          {m.photo_url
+                            ? <img src={m.photo_url} alt={m.name} />
+                            : <span>{initials(m.name)}</span>}
+                        </div>
+                        <div className="settings-member-info">
+                          <div className="settings-member-name-row">
+                            <span className="settings-member-name">{m.name}</span>
+                            <span
+                              className="settings-role-badge"
+                              style={{
+                                color: roleConfig.color,
+                                background: roleConfig.bg,
+                                border: `1px solid ${roleConfig.color}44`,
+                              }}
+                              title={`Agile Role: ${roleConfig.label}`}
+                            >
+                              {roleConfig.label}
+                            </span>
+                          </div>
+                          <span className="settings-member-email">{m.email}</span>
+                        </div>
+                        <div className="settings-member-header-actions">
+                          {team && m.id === team.owner_id && (
+                            <span className="settings-member-badge">Owner</span>
+                          )}
+                          {isOwner && m.id !== user.id && (
+                            <button className="settings-kick-btn" onClick={() => handleKick(m.id)}>
+                              Kick
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Controls: Role and Topics */}
                       {(m.id === user?.id || isOwner) && (
-                        <div style={{ marginTop: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <label>
-                            Role:
+                        <div className="settings-member-card-body">
+                          <div className="settings-member-field">
+                            <label className="settings-field-label">Role</label>
                             <select
-                              value={m.role || 'member'}
+                              className="settings-role-select"
+                              value={roleKey}
                               disabled={!isOwner}
                               onChange={(e) => handleUpdateMember(m.id, { role: e.target.value })}
-                              style={{ marginLeft: '4px', fontSize: '12px' }}
                             >
-                              <option value="member">Member</option>
-                              <option value="admin">Admin</option>
+                              <option value="scrum_master">Scrum Master</option>
+                              <option value="product_manager">Product Manager</option>
+                              <option value="team_member">Product Team Member</option>
                             </select>
-                          </label>
+                          </div>
+
                           {topics.length > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginLeft: '6px' }}>
-                              <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>Topics:</span>
-                              {topics.map((t) => {
-                                const isChecked = (m.notification_preferences || []).includes(t.name) || (m.notification_preferences || []).includes(String(t.id))
-                                return (
-                                  <label key={t.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', cursor: 'pointer' }}>
-                                    <input 
-                                      type="checkbox" 
-                                      checked={isChecked}
-                                      onChange={() => toggleNotificationPref(m, t.name)}
-                                    />
-                                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: t.color }} />
-                                    {t.name}
-                                  </label>
-                                )
-                              })}
+                            <div className="settings-member-field settings-member-field--topics">
+                              <label className="settings-field-label">Topics</label>
+                              <div className="settings-topics-grid">
+                                {topics.map((t) => {
+                                  const isChecked = (m.notification_preferences || []).includes(t.name) || (m.notification_preferences || []).includes(String(t.id))
+                                  return (
+                                    <label
+                                      key={t.id}
+                                      className={`settings-topic-chip ${isChecked ? 'settings-topic-chip--checked' : ''}`}
+                                    >
+                                      <input 
+                                        type="checkbox" 
+                                        checked={isChecked}
+                                        onChange={() => toggleNotificationPref(m, t.name)}
+                                      />
+                                      <span className="settings-topic-dot" style={{ background: t.color }} />
+                                      <span className="settings-topic-name">{t.name}</span>
+                                    </label>
+                                  )
+                                })}
+                              </div>
                             </div>
                           )}
                         </div>
                       )}
-                      {/* ── Notification Types (admin-only control) ── */}
+
+                      {/* Live Notifications */}
                       <div className="settings-notif-section">
-                        <span className="settings-notif-section-label">
-                          Live Notifications
-                          {!isOwner && (
-                            <span className="settings-notif-admin-badge">Admin only</span>
+                        <div className="settings-notif-section-header">
+                          <span className="settings-notif-section-label">Live Notifications</span>
+                          {!isOwner && m.id !== user?.id && (
+                            <span className="settings-notif-admin-badge">Owner only</span>
                           )}
-                        </span>
+                        </div>
                         <div className="settings-notif-types">
                           {NOTIFICATION_TYPES.map((nt) => {
-                            const isChecked = !(m.notification_preferences || []).includes(`${nt.key}:off`)
-                            // Only the owner can change notification types for any member
-                            const canEdit = isOwner
+                            const isChecked = isNotificationTypeActive(m.notification_preferences, nt.key, m.role)
+                            const canEdit = isOwner || m.id === user?.id
                             return (
                               <label
                                 key={nt.key}
                                 className={`settings-notif-type-chip ${isChecked ? 'settings-notif-type-chip--on' : 'settings-notif-type-chip--off'} ${!canEdit ? 'settings-notif-type-chip--locked' : ''}`}
-                                title={!canEdit ? 'Only admins can change notification types for members' : nt.description}
+                                title={!canEdit ? 'Only owner or member themselves can adjust notification preferences' : nt.description}
                               >
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   disabled={!canEdit}
                                   onChange={() => {
-                                    const prefs = m.notification_preferences || []
-                                    const offKey = `${nt.key}:off`
-                                    const newPrefs = isChecked
-                                      ? [...prefs, offKey]
-                                      : prefs.filter(p => p !== offKey)
+                                    const currentPrefs = Array.isArray(m.notification_preferences) ? m.notification_preferences : []
+                                    const targetState = !isChecked
+                                    const nonTypePrefs = currentPrefs.filter(
+                                      (p) => typeof p === 'string' && !p.startsWith('type:')
+                                    )
+                                    const updatedTypeTags = NOTIFICATION_TYPES.filter((ntItem) => {
+                                      if (ntItem.key === nt.key) return targetState
+                                      return isNotificationTypeActive(currentPrefs, ntItem.key, m.role)
+                                    }).map((ntItem) => ntItem.key)
+
+                                    const newPrefs = [...nonTypePrefs, ...updatedTypeTags]
                                     handleUpdateMember(m.id, { notification_preferences: newPrefs })
                                   }}
                                   style={{ display: 'none' }}
@@ -454,23 +556,15 @@ export default function Settings() {
                             )
                           })}
                         </div>
-                        {!isOwner && (
+                        {!isOwner && m.id !== user?.id && (
                           <p className="settings-hint" style={{ marginTop: '4px', fontSize: '11px' }}>
-                            Only the team owner can manage notification types for members.
+                            Only the team owner or member themselves can manage notification types.
                           </p>
                         )}
                       </div>
                     </div>
-                    {team && m.id === team.owner_id && (
-                      <span className="settings-member-badge">Owner</span>
-                    )}
-                    {isOwner && m.id !== user.id && (
-                      <button className="settings-kick-btn" onClick={() => handleKick(m.id)}>
-                        Kick
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

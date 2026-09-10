@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { meetingToCard } from '../utils'
 import UserSetupModal from '../components/UserSetupModal'
 import TeamSetupModal from '../components/TeamSetupModal'
+import SystemStatusTracker from '../components/SystemStatusTracker'
 import './AppLayout.css'
 
 /**
@@ -226,6 +227,8 @@ export default function AppLayout() {
             </Link>
           ))}
         </div>
+
+        <SystemStatusTracker />
 
         <div className="sidebar-user" ref={userMenuRef}>
           <button className="sidebar-user-btn" onClick={() => setShowUserMenu((v) => !v)}>
