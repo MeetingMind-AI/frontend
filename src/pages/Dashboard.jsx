@@ -317,7 +317,7 @@ function MeetingCard({ meeting, teamId, teamTopics, onRename, onDelete, onAddTop
                 <circle cx="12" cy="12" r="10" />
                 <polygon points="10 8 16 12 10 16" fill="currentColor" stroke="none" />
               </svg>
-              Go to live meeting
+              Live Meeting
             </button>
           )}
           <button
@@ -480,85 +480,74 @@ export default function Dashboard() {
       )}
 
       <div className="dash-join-box">
-        <div className="dash-join-box-left">
-          <div className="dash-join-box-title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="23 7 16 12 23 17 23 7" />
-              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-            </svg>
-            Start a New Meeting
+        <div className="dash-join-box-top">
+          <div className="dash-join-box-left">
+            <div className="dash-join-box-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="23 7 16 12 23 17 23 7" />
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+              </svg>
+              Start a New Meeting
+            </div>
+            <p className="dash-join-box-sub">Dispatch AI agents to an active meeting session</p>
           </div>
-          <p className="dash-join-box-sub">Dispatch AI agents to an active meeting session</p>
-        </div>
-        <div className="dash-mode-selector" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)', marginRight: '4px' }}>Meeting Mode:</span>
-          {[
-            {
-              key: 'general',
-              label: 'General Meeting',
-              icon: (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
-              ),
-              desc: 'Standard elapsed pacing',
-            },
-            {
-              key: 'daily_standup',
-              label: 'Daily Stand-up',
-              icon: (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-              ),
-              desc: '15m timebox & blocker priority',
-            },
-            {
-              key: 'sprint_planning',
-              label: 'Sprint Sync',
-              icon: (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-                </svg>
-              ),
-              desc: 'Backlog & scope alignment',
-            },
-          ].map((mode) => {
-            const isSelected = meetingType === mode.key
-            return (
-              <button
-                key={mode.key}
-                type="button"
-                onClick={() => setMeetingType(mode.key)}
-                disabled={dispatchState !== 'idle'}
-                title={mode.desc}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  borderRadius: '20px',
-                  fontSize: '12px',
-                  fontWeight: isSelected ? 600 : 400,
-                  cursor: dispatchState === 'idle' ? 'pointer' : 'default',
-                  transition: 'all 0.15s ease',
-                  border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
-                  background: isSelected ? 'rgba(79, 142, 247, 0.12)' : 'var(--bg-2)',
-                  color: isSelected ? 'var(--accent)' : 'var(--text-2)',
-                }}
-              >
-                <span style={{ display: 'inline-flex', alignItems: 'center' }}>{mode.icon}</span>
-                <span>{mode.label}</span>
-              </button>
-            )
-          })}
+          <div className="dash-mode-selector">
+            <span className="dash-mode-label">Meeting Mode:</span>
+            {[
+              {
+                key: 'general',
+                label: 'General Meeting',
+                icon: (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                ),
+                desc: 'Standard elapsed pacing',
+              },
+              {
+                key: 'daily_standup',
+                label: 'Daily Stand-up',
+                icon: (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                ),
+                desc: '15m timebox & blocker priority',
+              },
+              {
+                key: 'sprint_planning',
+                label: 'Sprint Sync',
+                icon: (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                  </svg>
+                ),
+                desc: 'Backlog & scope alignment',
+              },
+            ].map((mode) => {
+              const isSelected = meetingType === mode.key
+              return (
+                <button
+                  key={mode.key}
+                  type="button"
+                  onClick={() => setMeetingType(mode.key)}
+                  disabled={dispatchState !== 'idle'}
+                  title={mode.desc}
+                  className={`dash-mode-btn ${isSelected ? 'dash-mode-btn--selected' : ''}`}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>{mode.icon}</span>
+                  <span>{mode.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
         <div className="dash-join-input-row">
           <select
