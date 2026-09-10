@@ -55,24 +55,15 @@ export default function AppLayout() {
   const [showTeamSetup, setShowTeamSetup] = useState(false)
   const userMenuRef = useRef(null)
 
+  // First-time team workspace onboarding (topics & preferences setup wizard)
   useEffect(() => {
-    if (user?.id) {
-      const quickstartDismissed = localStorage.getItem(`mm_quickstart_dismissed_${user.id}`)
-      const legacyDone = localStorage.getItem(`mm_user_setup_completed_${user.id}`)
-      if (!quickstartDismissed && !legacyDone) {
-        setShowQuickstart(true)
-      }
-    }
-  }, [user?.id])
-
-  useEffect(() => {
-    if (teamId && user?.id && team && !showQuickstart) {
+    if (teamId && user?.id && team) {
       const teamDone = localStorage.getItem(`mm_team_setup_completed_${user.id}_${teamId}`)
       if (!teamDone) {
         setShowTeamSetup(true)
       }
     }
-  }, [teamId, user?.id, team, showQuickstart])
+  }, [teamId, user?.id, team])
 
 
   useEffect(() => {

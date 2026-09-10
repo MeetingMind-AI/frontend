@@ -406,19 +406,10 @@
   gap: 16px;
 }
 
-.qsm-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
+.qsm-step-indicator {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-3, #6e7681);
-  cursor: pointer;
-  user-select: none;
-}
-
-.qsm-checkbox-label input[type="checkbox"] {
-  accent-color: var(--accent, #4f8ef7);
-  cursor: pointer;
 }
 
 .qsm-btn-group {

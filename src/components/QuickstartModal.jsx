@@ -18,22 +18,12 @@ import './QuickstartModal.css'
 export default function QuickstartModal({ onClose, initialStep = 1 }) {
   const { user } = useAuth()
   const [step, setStep] = useState(initialStep)
-  const [dontShowAgain, setDontShowAgain] = useState(true)
 
   const handleFinish = () => {
-    if (user?.id && dontShowAgain) {
-      localStorage.setItem(`mm_quickstart_dismissed_${user.id}`, 'true')
-      // Also set legacy key to avoid old triggers
-      localStorage.setItem(`mm_user_setup_completed_${user.id}`, 'true')
-    }
     onClose?.()
   }
 
   const handleClose = () => {
-    if (user?.id && dontShowAgain) {
-      localStorage.setItem(`mm_quickstart_dismissed_${user.id}`, 'true')
-      localStorage.setItem(`mm_user_setup_completed_${user.id}`, 'true')
-    }
     onClose?.()
   }
 
@@ -286,14 +276,9 @@ export default function QuickstartModal({ onClose, initialStep = 1 }) {
 
         {/* Footer */}
         <div className="qsm-footer">
-          <label className="qsm-checkbox-label">
-            <input
-              type="checkbox"
-              checked={dontShowAgain}
-              onChange={(e) => setDontShowAgain(e.target.checked)}
-            />
-            <span>Don't show this guide automatically on startup</span>
-          </label>
+          <div className="qsm-step-indicator">
+            Step {step} of 4
+          </div>
 
           <div className="qsm-btn-group">
             {step > 1 ? (
