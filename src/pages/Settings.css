@@ -4,7 +4,8 @@
   min-height: 100%;
 }
 
-.settings-top {
+.settings-top,
+.settings-page > .page-header {
   padding: 28px 32px 20px;
   border-bottom: 1px solid var(--border);
 }

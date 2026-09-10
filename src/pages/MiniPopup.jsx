@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { explainMeeting } from '../api'
+import { getBrowserPipSupport } from '../utils'
 import './MiniPopup.css'
 
 export default function MiniPopup() {
@@ -49,6 +50,7 @@ export default function MiniPopup() {
   }
 
   const parkingLot = proposals.filter((p) => p.type === 'parking_lot')
+  const pipSupport = getBrowserPipSupport()
 
   return (
     <div className="mp-root">
@@ -67,6 +69,19 @@ export default function MiniPopup() {
         </div>
         <span className="mp-meeting-label">Meeting #{meetingId}</span>
       </header>
+
+      {!pipSupport.isSupported && (
+        <div className="mp-browser-banner">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>
+            {pipSupport.message || 'Always-on-top Document PiP is not supported in this browser. Please change browser to Chrome or Edge for the floating overlay.'}
+          </span>
+        </div>
+      )}
 
       <section className="mp-section">
         <div className="mp-section-title">Instant Clarity</div>

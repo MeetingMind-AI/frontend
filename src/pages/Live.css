@@ -176,6 +176,53 @@
   border-color: var(--accent);
 }
 
+.live-browser-warning-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: rgba(239, 68, 68, 0.14);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.live-browser-warning-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.live-browser-warning-icon {
+  flex-shrink: 0;
+  color: var(--red);
+}
+
+.live-browser-warning-close {
+  background: transparent;
+  border: none;
+  color: #fca5a5;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  margin-left: 12px;
+}
+
+.live-browser-warning-close:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fff;
+}
+
 .live-body {
   flex: 1;
   display: flex;
