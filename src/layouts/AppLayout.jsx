@@ -202,29 +202,6 @@ export default function AppLayout() {
             </svg>
             Parking Lot
           </NavLink>
-
-          <NavLink to={`${base}/archive`} className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="21 8 21 21 3 21 3 8" />
-              <rect x="1" y="3" width="22" height="5" />
-              <line x1="10" y1="12" x2="14" y2="12" />
-            </svg>
-            Archive
-          </NavLink>
-
-          <button
-            type="button"
-            className="sidebar-link sidebar-link--btn"
-            onClick={() => setShowQuickstart(true)}
-            title="Open Quickstart Tutorial"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            Quickstart Guide
-          </button>
         </nav>
 
         <div className="sidebar-recent">
@@ -243,6 +220,31 @@ export default function AppLayout() {
               </div>
             </Link>
           ))}
+        </div>
+
+        <div className="sidebar-footer-nav">
+          <NavLink to={`${base}/archive`} className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="21 8 21 21 3 21 3 8" />
+              <rect x="1" y="3" width="22" height="5" />
+              <line x1="10" y1="12" x2="14" y2="12" />
+            </svg>
+            Archive
+          </NavLink>
+
+          <button
+            type="button"
+            className="sidebar-link sidebar-link--btn"
+            onClick={() => setShowQuickstart(true)}
+            title="Open Quickstart Tutorial"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            Quickstart Guide
+          </button>
         </div>
 
         <SystemStatusTracker />

@@ -172,7 +172,7 @@ export default function QuickstartModal({ onClose, initialStep = 1 }) {
                   <div className="qsm-flow-num">1</div>
                   <div className="qsm-flow-content">
                     <h4>Paste Meeting Link</h4>
-                    <p>Supports <strong>Google Meet</strong>, <strong>Microsoft Teams</strong>, <strong>Zoom</strong>, and <strong>Jitsi</strong> directly from the team dashboard.</p>
+                    <p>Supports <strong>Google Meet</strong> and <strong>Microsoft Teams</strong> directly from the team dashboard.</p>
                   </div>
                 </div>
 

@@ -219,6 +219,16 @@
   flex-shrink: 0;
 }
 
+/* ── Bottom footer nav (Archive & Quickstart Guide) ── */
+.sidebar-footer-nav {
+  margin-top: auto;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* ── User panel ── */
 .sidebar-user {
   position: relative;

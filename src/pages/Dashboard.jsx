@@ -569,7 +569,6 @@ export default function Dashboard() {
             aria-label="Meeting platform"
           >
             <option value="google_meet">Google Meet</option>
-            <option value="zoom">Zoom</option>
             <option value="teams">Microsoft Teams</option>
           </select>
           <div className={`dash-join-input-group ${url ? 'dash-join-input-group--filled' : ''}`}>

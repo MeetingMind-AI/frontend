@@ -251,3 +251,21 @@
   padding: 2px 7px;
   border-radius: 99px;
 }
+
+.team-card-settings-btn {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  padding: 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.team-card-settings-btn:hover {
+  color: var(--text-0);
+  background: var(--bg-1);
+}
