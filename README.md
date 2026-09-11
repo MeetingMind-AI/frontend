@@ -73,7 +73,7 @@ All communication between the frontend React application and backend services fl
 - `transferTeamOwnership(teamId, newOwnerId)`: Reassigns team ownership to an existing active member (owner only).
 - `deleteTeam(teamId)`: Permanently deletes a team workspace and all associated meetings, transcripts, and records (owner only).
 - `leaveTeam(teamId)`: Removes the authenticated user from the team.
-- `getInviteLink(teamId)`: Generates a sharable invitation token.
+- `getInviteLink(teamId)`: Retrieves the pre-generated invite token and full invite URL.
 - `joinTeam(inviteToken)`: Joins a team using a valid invitation token.
 - `getMembers(teamId)`: Lists all members belonging to a team.
 - `updateTeamMember(teamId, userId, payload)`: Updates member role (`scrum_master`, `product_manager`, `team_member`) and notification preferences.
@@ -112,7 +112,7 @@ All communication between the frontend React application and backend services fl
 ### 6. Actions, Kanban, & Archive (`/api/meetings/:id/actions` & `/api/actions`)
 - `getActions(meetingId)`: Retrieves categorized proposals for a specific meeting (`to_do`, `parking_lot`, `to_schedule`, `blocker`).
 - `getAllActions(teamId)`: Aggregates actions across all team meetings for Global Kanban, Parking Lot, Schedule, and Archive views.
-- `createAction(meetingId, actionType, content, assigneeId, tags, status)`: Creates a new action item manually.
+- `createAction(meetingId, actionType, content, assigneeId, tags, status)`: Creates a new action item manually (defaults status to `accepted`).
 - `updateAction(meetingId, actionId, status, content, assigneeId, actionType, tags)`: Updates status (`accepted`, `pending`, `rejected`, `archived`), text, or assignee.
 - `deleteAction(meetingId, actionId)`: Deletes an action item.
 
@@ -123,7 +123,7 @@ All communication between the frontend React application and backend services fl
 ### 8. Real-time WebSocket Ingest (`/api/ws/ingest/:id`)
 - `openInsightSocket(meetingId, callbacks)`: Opens a WebSocket connection streaming real-time events:
   - `transcript_snapshot`: Hydrates past speaker turns on initial connection.
-  - `transcript_chunk`: Receives incoming speaker utterances with interim speech stitching.
+  - `transcript_chunk`: Receives incoming speaker utterances (stitched and updated client-side in `Live.jsx`).
   - `insight`: Streams live observations from the Scrum Master agent.
   - `proposal`: Streams real-time action proposals detected during the meeting.
   - `agent_thought`: Streams agent deliberation traces.

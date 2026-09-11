@@ -322,7 +322,7 @@ export default function SystemStatusTracker() {
                 Core Infrastructure Diagnostics:
                 Renders ping round-trip latency (ms) and operational health for each critical backing service:
                 - PostgreSQL 15: Primary relational data store for meetings, transcripts, and team entities.
-                - Redis 7: Real-time Pub/Sub broker for live audio chunk distribution and session cache.
+                - Redis 7: Ephemeral 60s TTL cache for Instant Clarity explanations.
                 - Qdrant Vector DB: Semantic embeddings store for context retrieval and rag search.
                 - Whisper STT: Speech-to-text inference engine generating real-time speaker transcripts.
               */}
